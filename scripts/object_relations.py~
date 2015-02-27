@@ -22,6 +22,7 @@ img = []
 x={}
 y={}
 c={}
+xyz = {}
 idd={}
 flag1=0
 flag2=0
@@ -41,15 +42,23 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def objects(imgmsg):
-	global x,y,c,flag1,idd
+	global xyz,x,y,c,flag1,idd
 	
 	for i in imgmsg.markers:
 		data = len(i.points)
 		x[i.id] = np.zeros(data,dtype=int)
 		y[i.id] = np.zeros(data,dtype=int)
 		c[i.id] = [int(i.color.b*255), int(i.color.g*255), int(i.color.r*255)]
+		xyz[i.id] = {}
+		xyz[i.id]['x'] = np.zeros(data,dtype=float)
+		xyz[i.id]['y'] = np.zeros(data,dtype=float)
+		xyz[i.id]['z'] = np.zeros(data,dtype=float)
 		for j in range(data):
 			k = i.points[j]
+			xyz[i.id]['x'][j] = k.x
+			xyz[i.id]['y'][j] = k.y
+			xyz[i.id]['z'][j] = k.z
+			xyz[i.id]
 			x[i.id][j] = int(k.x * fx / k.z + cx)
 			y[i.id][j] = int(k.y * fy / k.z + cy)
 
@@ -72,49 +81,30 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def talker():
-	global img,x,y,c,flag1,flag2
+	global img,x,y,c,flag1,flag2,xyz
 	while not rospy.is_shutdown():
 		if flag1==1 and flag2==1:
 			img2 = img.copy()
 			x2 = x.copy()
 			y2 = y.copy()
 			c2 = c.copy()
+			xyz2 = xyz.copy()
 
 			#------- find the object colors --------#
 			b,g,r = cv2.split(img2)
-			h = np.zeros((300,int((3*th+4*sp)*len(x2)),3), np.uint8)+255
-			counter = 0
+			#h = np.zeros((300,int((3*th+4*sp)*len(x2)),3), np.uint8)+255
+			#counter = 0
 			for i in x2:
-				b_list = b[y2[i],x2[i]].copy()
-				b_list = b_list.tolist()
 
+				b_val = int(np.mean(b[y2[i],x2[i]].tolist()))
+				g_val = int(np.mean(g[y2[i],x2[i]].tolist()))
+				r_val = int(np.mean(r[y2[i],x2[i]].tolist()))
 
-				g_list = g[y2[i],x2[i]].copy()
-				g_list = g_list.tolist()
-
-
-				r_list = r[y2[i],x2[i]].copy()
-				r_list = r_list.tolist()
-
-
-				#for j in range(256):
-				#	b_counter[j] = b_list.count(j)
-				#	g_counter[j] = g_list.count(j)
-				#	r_counter[j] = r_list.count(j)
-
-				#b_val = b_counter.index(max(b_counter))
-				#g_val = g_counter.index(max(g_counter))
-				#r_val = r_counter.index(max(r_counter))
-
-				b_val = int(np.mean(b_list))
-				g_val = int(np.mean(g_list))
-				r_val = int(np.mean(r_list))
-
-				sh = (3*th+4*sp)*counter
-				h[300-b_val:300, sh+(counter+1)*sp : sh+(counter+1)*sp+th,:] = [255,0,0]
-				h[300-g_val:300, sh+(counter+2)*sp+th : sh+(counter+2)*sp+2*th,:] = [0,255,0]
-				h[300-r_val:300, sh+(counter+3)*sp+2*th : sh+(counter+3)*sp+3*th,:] = [0,0,255]
-				counter += 1
+				#sh = (3*th+4*sp)*counter
+				#h[300-b_val:300, sh+(counter+1)*sp : sh+(counter+1)*sp+th,:] = [255,0,0]
+				#h[300-g_val:300, sh+(counter+2)*sp+th : sh+(counter+2)*sp+2*th,:] = [0,255,0]
+				#h[300-r_val:300, sh+(counter+3)*sp+2*th : sh+(counter+3)*sp+3*th,:] = [0,0,255]
+				#counter += 1
 
 				X2 = int(np.mean(x2[i]))
 				Y2 = int(np.mean(y2[i]))
@@ -126,6 +116,23 @@ if __name__ == '__main__':
 				cv2.putText(img2,"hsv [%s,%1.2f,%1.2f]" % (int(hsv[0]*360),hsv[1],hsv[2]), (X2,Y2+30), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 
 
+			counter = 1
+			for i in range(len(x2)-1):
+				for j in range(i+1,len(x2)):
+					xi = np.mean(xyz2[i]['x'])
+					yi = np.mean(xyz2[i]['y'])
+					zi = np.mean(xyz2[i]['z'])
+
+					xj = np.mean(xyz2[j]['x'])
+					yj = np.mean(xyz2[j]['y'])
+					zj = np.mean(xyz2[j]['z'])
+					
+					dis = np.sqrt(  (np.abs(xi-xj))**2  +  (np.abs(yi-yj))**2  +  (np.abs(zi-zj))**2  )
+					cv2.putText(img2,"distance [%s,%s] = %4.2f" % (i,j,dis), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+					counter+=1
+
+			print xi ,yi ,zi
+
 
 			#------- plot the image like rviz --------#
 			#img2.setflags(write=True)
@@ -134,7 +141,7 @@ if __name__ == '__main__':
 			#k = cv2.waitKey(1) & 0xFF
 
 		    	cv2.imshow('RGB',img2)
-			cv2.imshow('color histograms',h)
+			#cv2.imshow('color histograms',h)
 
 			"""
 			for i in x2:
