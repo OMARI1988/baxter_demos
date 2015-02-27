@@ -51,6 +51,7 @@ def send_image(img_name):
     dirr = '/home/omari/ros_ws/src/baxter_demos/share/images/'
     path = dirr+img_name+'.png'
     img = cv2.imread(path)
+    print img
     msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
     pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
     pub.publish(msg)

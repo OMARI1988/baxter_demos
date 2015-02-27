@@ -22,7 +22,6 @@ img = []
 x={}
 y={}
 c={}
-idd={}
 flag1=0
 flag2=0
 
@@ -41,28 +40,21 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def objects(imgmsg):
-	global x,y,c,flag1,idd
-	
+	global x,y,c,flag1
+	x = {}
+	y = {}
+	c = {}
 	for i in imgmsg.markers:
 		data = len(i.points)
 		x[i.id] = np.zeros(data,dtype=int)
 		y[i.id] = np.zeros(data,dtype=int)
 		c[i.id] = [int(i.color.b*255), int(i.color.g*255), int(i.color.r*255)]
 		for j in range(data):
+			#x_world = (x - cx) * z / fx
+			#y_world = (y - cy) * z / fy
 			k = i.points[j]
 			x[i.id][j] = int(k.x * fx / k.z + cx)
 			y[i.id][j] = int(k.y * fy / k.z + cy)
-
-		idd[i.id] = 0
-
-	for j in x.keys():
-		idd[j]+=1
-		if idd[j] == 5:
-			idd.pop(j, None)
-			x.pop(j, None)
-			y.pop(j, None)
-			c.pop(j, None)
-	print idd
 	flag1=1
 
 #--------------------------------------------------------------------------------------#
@@ -80,36 +72,35 @@ if __name__ == '__main__':
 			x2 = x.copy()
 			y2 = y.copy()
 			c2 = c.copy()
+			#------- plot the image like rviz --------#
+			img2.setflags(write=True)
+			for i in x2:
+				img2[y2[i],x2[i]] = c2[i]
+			#k = cv2.waitKey(1) & 0xFF
 
 			#------- find the object colors --------#
 			b,g,r = cv2.split(img2)
+			#h = np.zeros((300,3*th+4*sp*len(x2),3))
 			h = np.zeros((300,int((3*th+4*sp)*len(x2)),3), np.uint8)+255
 			counter = 0
 			for i in x2:
-				b_list = b[y2[i],x2[i]].copy()
-				b_list = b_list.tolist()
+				b_list = b[y2[i],x2[i]].tolist()
+				b_counter = np.zeros(256).tolist()
 
+				g_list = g[y2[i],x2[i]].tolist()
+				g_counter = np.zeros(256).tolist()
 
-				g_list = g[y2[i],x2[i]].copy()
-				g_list = g_list.tolist()
+				r_list = r[y2[i],x2[i]].tolist()
+				r_counter = np.zeros(256).tolist()
 
+				for j in range(256):
+					b_counter[j] = b_list.count(j)
+					g_counter[j] = g_list.count(j)
+					r_counter[j] = r_list.count(j)
 
-				r_list = r[y2[i],x2[i]].copy()
-				r_list = r_list.tolist()
-
-
-				#for j in range(256):
-				#	b_counter[j] = b_list.count(j)
-				#	g_counter[j] = g_list.count(j)
-				#	r_counter[j] = r_list.count(j)
-
-				#b_val = b_counter.index(max(b_counter))
-				#g_val = g_counter.index(max(g_counter))
-				#r_val = r_counter.index(max(r_counter))
-
-				b_val = int(np.mean(b_list))
-				g_val = int(np.mean(g_list))
-				r_val = int(np.mean(r_list))
+				b_val = b_counter.index(max(b_counter))
+				g_val = g_counter.index(max(g_counter))
+				r_val = r_counter.index(max(r_counter))
 
 				sh = (3*th+4*sp)*counter
 				h[300-b_val:300, sh+(counter+1)*sp : sh+(counter+1)*sp+th,:] = [255,0,0]
@@ -122,17 +113,9 @@ if __name__ == '__main__':
 
 				hsv = colorsys.rgb_to_hsv(r_val/255.0,g_val/255.0,b_val/255.0)
 
-				cv2.putText(img2,"obj.id %s" % (i), (X2,Y2), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-				cv2.putText(img2,"rgb [%s,%s,%s]" % (r_val,g_val,b_val), (X2,Y2+15), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-				cv2.putText(img2,"hsv [%s,%1.2f,%1.2f]" % (int(hsv[0]*360),hsv[1],hsv[2]), (X2,Y2+30), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-
-
-
-			#------- plot the image like rviz --------#
-			#img2.setflags(write=True)
-			#for i in x2:
-			#	img2[y2[i],x2[i]] = c2[i]
-			#k = cv2.waitKey(1) & 0xFF
+				cv2.putText(img2,"obj.id %s" % (i), (X2,Y2), cv2.FONT_HERSHEY_SIMPLEX, .5, 255)
+				cv2.putText(img2,"rgb [%s,%s,%s]" % (r_val,g_val,b_val), (X2,Y2+15), cv2.FONT_HERSHEY_SIMPLEX, .5, 255)
+				cv2.putText(img2,"hsv [%s,%s,%s]" % (int(hsv[0]*360),hsv[1],hsv[2]), (X2,Y2+30), cv2.FONT_HERSHEY_SIMPLEX, .5, 255)
 
 		    	cv2.imshow('RGB',img2)
 			cv2.imshow('color histograms',h)
