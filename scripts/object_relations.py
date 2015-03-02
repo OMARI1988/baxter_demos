@@ -58,7 +58,7 @@ if __name__ == '__main__':
 			xyz[i.id]['x'][j] = k.x
 			xyz[i.id]['y'][j] = k.y
 			xyz[i.id]['z'][j] = k.z
-			xyz[i.id]
+			#xyz[i.id]
 			x[i.id][j] = int(k.x * fx / k.z + cx)
 			y[i.id][j] = int(k.y * fy / k.z + cy)
 
@@ -118,8 +118,9 @@ if __name__ == '__main__':
 
 
 			counter = 1
-			for i in range(len(x2)-1):
-				for j in range(i+1,len(x2)):
+
+			for i in range(len(xyz2)-1):
+				for j in range(i+1,len(xyz2)):
 					xi = np.mean(xyz2[i]['x'])
 					yi = np.mean(xyz2[i]['y'])
 					zi = np.mean(xyz2[i]['z'])
@@ -132,7 +133,7 @@ if __name__ == '__main__':
 					cv2.putText(img2,"distance [%s,%s] = %4.2f" % (i,j,dis), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 					counter+=1
 
-			print xi ,yi ,zi
+			#print xi ,yi ,zi
 
 
 			#------- plot the image like rviz --------#
@@ -171,14 +172,11 @@ if __name__ == '__main__':
 
     rospy.init_node('rosColordetect')
     image_topic = rospy.resolve_name("/camera/rgb/image_color") 
-    depth_topic = rospy.resolve_name("/camera/depth_registered/image_raw") 
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters") 
-
-    
 
     rospy.Subscriber(image_topic, sensor_msgs.msg.Image, detect_and_draw)
     rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, objects)
-    #rospy.Subscriber(depth_topic, sensor_msgs.msg.Image, depth_calculation)
+
     talker()
     print 'test'
 
