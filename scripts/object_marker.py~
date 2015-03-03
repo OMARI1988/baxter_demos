@@ -37,50 +37,81 @@ from math import sqrt
 from visualization_msgs.msg import *
 from geometry_msgs.msg import Pose,Point
 from std_msgs.msg import ColorRGBA
-
+import numpy as np
 from itertools import combinations
 
 global obj_id
 obj_id = {}
 
+rx = 0.0
+ry = 0.7854
+rz = 0.0
+cy = np.cos(ry)
+sy = np.sin(ry)
+print cy,sy
+dx = 0.22
+dy = 0.08
+dz = 0.18
+def camera_to_torso(p):
+
+	#print p.x,p.y,p.z
+	P = Point()
+	P.x = p.z 
+	P.y = -(p.x+.042)
+	P.z = -p.y 
+
+	#P.x = P.x + rz*P.y - ry*P.z
+	#P.y = -rz*P.x + P.y + rx*P.z
+	#P.z = ry*P.x - rx*P.y + P.z
+	
+	x = cy*P.x + sy*P.z
+	z = -sy*P.x + cy*P.z
+	
+	P.x = x + dx
+	P.z = z + dz
+	return P
 #--------------------------------------------------------------------------------------#
 def objects(msg):
 	global obj_id,server
 	for i in msg.markers:
 		data = len(i.points)
-	
-		x_min = i.points[0].z
-		x_max = i.points[0].z
-		y_min = i.points[0].x
-		y_max = i.points[0].x
-		z_min = -i.points[0].y
-		z_max = -i.points[0].y
-		for j in range(data):
-			k = i.points[j]
-			if k.z < x_min:
-				x_min = k.z
-			if k.z > x_max:
-				x_max = k.z
-			if k.x < y_min:
-				y_min = k.x
-			if k.x > y_max:
-				y_max = k.x
-			if -k.y < z_min:
-				z_min = -k.y
-			if -k.y > z_max:
-				z_max = -k.y
+		
+		P = camera_to_torso(i.points[0])
+		x_min = P.x
+		x_max = P.x
+		y_min = P.y
+		y_max = P.y
+		z_min = P.z
+		z_max = P.z
 
-		print y_min,y_max
+		for j in range(data):
+			P = camera_to_torso(i.points[j])
+			
+			#k = i.points[j]
+			if P.x < x_min:
+				x_min = P.x
+			if P.x > x_max:
+				x_max = P.x
+			if P.y < y_min:
+				y_min = P.y
+			if P.y > y_max:
+				y_max = P.y
+			if P.z < z_min:
+				z_min = P.z
+			if P.z > z_max:
+				z_max = P.z
+
+		
+
+
 		if i.id not in obj_id:
-			makeObjMarker(x_min,x_max,-y_min,-y_max,z_min,z_max,i.id)
-			#makeObjMarker(x_min,x_max,-y_min,-y_max,z_min,z_max,i.id+10)
+			makeObjMarker(x_min,x_max,y_min,y_max,z_min,z_max,i.id)
 			obj_id[i.id] = {}
 			obj_id[i.id]['counter'] = 0
 		else:
 			server.erase('obj'+str(i.id))
 			server.applyChanges()
-			makeObjMarker(x_min,x_max,-y_min,-y_max,z_min,z_max,i.id)
-			#makeObjMarker(x_min,x_max,-y_min,-y_max,z_min,z_max,i.id+10)
+			makeObjMarker(x_min,x_max,y_min,y_max,z_min,z_max,i.id)
 			obj_id[i.id]['counter'] = 0
 
 	for j in obj_id.keys():
@@ -102,7 +133,7 @@ def objFeedback( feedback ):
 def create_object_marker( name, X, Y, Z ):
         # create an interactive marker for our server
         int_marker = InteractiveMarker()
-        int_marker.header.frame_id = "/camera_depth_frame"
+        int_marker.header.frame_id = "/torso"
         int_marker.name = 'obj'+str(name)
         int_marker.description = 'obj'+str(name)
 	
