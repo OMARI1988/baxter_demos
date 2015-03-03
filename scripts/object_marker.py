@@ -48,21 +48,17 @@ ry = 0.7854
 rz = 0.0
 cy = np.cos(ry)
 sy = np.sin(ry)
-print cy,sy
+
 dx = 0.22
 dy = 0.08
 dz = 0.18
 def camera_to_torso(p):
 
-	#print p.x,p.y,p.z
+	# rotate frames around y axis and then offset them to match the kinect position on the robot torso
 	P = Point()
 	P.x = p.z 
 	P.y = -(p.x+.042)
 	P.z = -p.y 
-
-	#P.x = P.x + rz*P.y - ry*P.z
-	#P.y = -rz*P.x + P.y + rx*P.z
-	#P.z = ry*P.x - rx*P.y + P.z
 	
 	x = cy*P.x + sy*P.z
 	z = -sy*P.x + cy*P.z
