@@ -453,20 +453,20 @@ def sentence_parsing(hyp,sentence):
 		if j not in hyp['hyp']:
 			hyp['hyp'][j] = {}
 			hyp['hyp'][j]['counter_HSV'] = 0	
-			hyp['hyp'][j]['hist_HSV'] = np.zeros(shape=(201,201,101))
-			hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101))
+			hyp['hyp'][j]['hist_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
+			hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
 			hyp['hyp'][j]['not_a_hyp_HSV'] = 0
 			hyp['hyp'][j]['counter_SPA'] = 0
-			hyp['hyp'][j]['hist_SPA'] = np.zeros(shape=(201,201,101))
-			hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101))
+			hyp['hyp'][j]['hist_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
+			hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
 			hyp['hyp'][j]['not_a_hyp_SPA'] = 0
 
 			hyp['hyp'][j]['counter_dis'] = 0	
-			hyp['hyp'][j]['hist_dis'] = np.zeros(shape=(1000))		# up to 1000 pixel
-			hyp['hyp'][j]['score_dis'] = np.zeros(shape=(1000))		# up to 1000 pixel
+			hyp['hyp'][j]['hist_dis'] = np.zeros(shape=(1000),dtype=np.int16)		# up to 1000 pixel
+			hyp['hyp'][j]['score_dis'] = np.zeros(shape=(1000),dtype=np.int16)		# up to 1000 pixel
 			hyp['hyp'][j]['counter_dir'] = 0
-			hyp['hyp'][j]['hist_dir'] = np.zeros(shape=(360))		# up to 1000 pixel
-			hyp['hyp'][j]['score_dir'] = np.zeros(shape=(360))		# up to 1000 pixel
+			hyp['hyp'][j]['hist_dir'] = np.zeros(shape=(360),dtype=np.int16)		# up to 1000 pixel
+			hyp['hyp'][j]['score_dir'] = np.zeros(shape=(360),dtype=np.int16)		# up to 1000 pixel
 
 		if j not in hyp['words']:
 			hyp['words'].append(j)	

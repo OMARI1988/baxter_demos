@@ -8,6 +8,8 @@ from networkx import *
 from baxter_demos.msg import obj_relations
 from Learning_functions import *
 from Plotting_functions import *
+import pickle
+import inspect, os
 
 from interactive_markers.interactive_marker_server import *
 from math import sqrt
@@ -16,21 +18,70 @@ from visualization_msgs.msg import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 #-----------------------------------------------------------------------------------------------------#
-global f,obj_r,POINTS_HSV,POINTS_SPA,hyp
+global obj_r
 obj_r = []
 
-POINTS_HSV = []		# the points used in plotting
-POINTS_SPA = []		# the points used in plotting
-hyp = {}		# the robot hypotheses
-hyp['hyp'] = {}
-hyp['valid_HSV_hyp'] = []
-f = open('/home/omari/ros_ws/src/baxter_demos/share/language.txt', 'w')
 
 
 
 #-----------------------------------------------------------------------------------------------------#
-def Learning(sentence,o):
-	global POINTS_HSV,POINTS_SPA,hyp
+class Learning:
+    
+    def __init__(self):
+	self.directory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+	self.directory = self.directory.replace("scripts", "share/");
+	#print self.directory
+	self.POINTS_HSV = []		# the points used in plotting
+	self.POINTS_SPA = []		# the points used in plotting
+	self.hyp = {}			# the robot hypotheses
+	self.hyp['hyp'] = {}
+	self.hyp['valid_HSV_hyp'] = []
+
+	plt.ion()
+
+	self.f_HSV=plt.figure(4)
+	self.ax_HSV = self.f_HSV.add_subplot(111, projection='3d')
+	self.f_HSV.suptitle('Robot Hypotheses in HSV', fontsize=20)
+	self.ax_HSV.set_xlabel('X')
+	self.ax_HSV.set_ylabel('Y')
+	self.ax_HSV.set_zlabel('Z')
+
+	self.f_DIS=plt.figure(5)
+	self.ax_DIS = self.f_DIS.add_subplot(111, projection='3d')
+	self.f_DIS.suptitle('Robot Hypotheses in Distance', fontsize=20)
+	self.ax_DIS.set_xlabel('X')
+	self.ax_DIS.set_ylabel('Y')
+	self.ax_DIS.set_zlabel('Z')
+
+	self.f_DIR=plt.figure(6)
+	self.ax_DIR = self.f_DIR.add_subplot(111, projection='3d')
+	self.f_DIR.suptitle('Robot Hypotheses in Direction', fontsize=20)
+	self.ax_DIR.set_xlabel('X')
+	self.ax_DIR.set_ylabel('Y')
+	self.ax_DIR.set_zlabel('Z')
+	
+
+    def load(self):
+	pkl_file = open(self.directory+'data.pkl', 'rb')
+	print ' - loading data..'
+	data1 = pickle.load(pkl_file)
+	print ' - file loaded..'
+	self.POINTS_HSV = data1['HSV']
+	self.POINTS_SPA = data1['SPA']
+	self.hyp = data1['hyp']
+	self.Plot()
+
+    def save(self):
+	data1 = {}
+	data1['HSV'] = self.POINTS_HSV
+	data1['SPA'] = self.POINTS_SPA
+	data1['hyp'] = self.hyp
+	output = open(self.directory+'data.pkl', 'wb')
+	print ' - saving data..'
+	pickle.dump(data1, output)
+	print ' - data saved..'
+
+    def language_and_vision(self,sentence,o):
 	o_color = {}
 	o_color['H'] = o.H
 	o_color['S'] = o.S
@@ -45,49 +96,142 @@ def Learning(sentence,o):
 			count+=1
 	print(' - Sentence: '+sentence)
 	print(' - Parsing Sentence..')
-	hyp = sentence_parsing(hyp,sentence)					# create a ser of words and increament the counter
+	self.hyp = sentence_parsing(self.hyp,sentence)					# create a ser of words and increament the counter
 	print(' - Update Histograms..')
-	hyp,POINTS_HSV = Update_HSV_histogram(hyp,o_color,POINTS_HSV)		# update the histogram of HSV
-	hyp = Test_HSV_Hypotheses(hyp,o_color,sentence)				# check to see if objects match any of the hypotheses
+	self.hyp,self.POINTS_HSV = Update_HSV_histogram(self.hyp,o_color,self.POINTS_HSV)		# update the histogram of HSV
+	self.hyp = Test_HSV_Hypotheses(self.hyp,o_color,sentence)				# check to see if objects match any of the hypotheses
 
-	if hyp['objects_hyp'][0] != []:
-		POINTS_SPA = Update_SPA_histogram(o_qsr,POINTS_SPA)		# update the histogram of SPA
+	if self.hyp['objects_hyp'][0] != []:
+		self.POINTS_SPA = Update_SPA_histogram(o_qsr,self.POINTS_SPA)		# update the histogram of SPA
 
 		#===========##============##===========$$============##===========##==============#	WITHOUT CK
-		#hyp = Update_dis_histogram(hyp,o_qsr)		# update the histogram of distance WITHOUT CK
-		#hyp = Update_dir_histogram(hyp,o_qsr)		# update the histogram of angle WITHOUT CK
+		#self.hyp = Update_dis_histogram(self.hyp,o_qsr)		# update the histogram of distance WITHOUT CK
+		#self.hyp = Update_dir_histogram(self.hyp,o_qsr)		# update the histogram of angle WITHOUT CK
 
 
 		#===========##============##===========$$============##===========##==============#	WITH CK
-		hyp = Update_dis_histogram_use_CK(hyp,o_qsr,sentence)		# update the histogram of distance
-		hyp = Update_dir_histogram_use_CK(hyp,o_qsr,sentence)		# update the histogram of angle
+		self.hyp = Update_dis_histogram_use_CK(self.hyp,o_qsr,sentence)		# update the histogram of distance
+		self.hyp = Update_dir_histogram_use_CK(self.hyp,o_qsr,sentence)		# update the histogram of angle
 
 	print(' - Compute Hypotheses..')
-	hyp = Compute_HSV_hypotheses(hyp)		# Compute HSV hypotheses
-	hyp = Compute_dis_hypotheses(hyp)		# Compute dis hypotheses 
-	hyp = Compute_dir_hypotheses(hyp)		# Compute ang hypotheses
+	self.hyp = Compute_HSV_hypotheses(self.hyp)		# Compute HSV hypotheses
+	self.hyp = Compute_dis_hypotheses(self.hyp)		# Compute dis hypotheses 
+	self.hyp = Compute_dir_hypotheses(self.hyp)		# Compute ang hypotheses
+	self.Plot()
 
+    def Plot(self):
 	print(' - Plotting Hypotheses..')
-	Plotting_HSV_hypotheses(hyp,ax_HSV)
-	Plotting(POINTS_HSV,ax_HSV,90,4,25,'HSV',0)
+	Plotting_HSV_hypotheses(self.hyp,self.ax_HSV)
+	Plotting(self.POINTS_HSV,self.ax_HSV,15,4,25,'HSV',0)
 
-	#Plotting_SPA_hypotheses(hyp,ax_SPA)
-	Plotting_dis_hypotheses(hyp,ax_DIS)
-	Plotting(POINTS_SPA,ax_DIS,90,5,85,'Distance',0)
+	#Plotting_SPA_hypotheses(self.hyp,ax_SPA)
+	Plotting_dis_hypotheses(self.hyp,self.ax_DIS)
+	Plotting(self.POINTS_SPA,self.ax_DIS,90,5,85,'Distance',0)
 
-	Plotting_dir_hypotheses(hyp,ax_DIR)
-	Plotting(POINTS_SPA,ax_DIR,90,6,85,'Direction',0)
+	Plotting_dir_hypotheses(self.hyp,self.ax_DIR)
+	Plotting(self.POINTS_SPA,self.ax_DIR,90,6,85,'Direction',0)
 	print(' - Done..')
 	print(' ------------------')
 
-
-	#print POINTS_HSV
         #int_marker = create_object_marker(idd,x,y,z)
         #server.insert(int_marker, objFeedback)
         #server.applyChanges()
 
+
 #-----------------------------------------------------------------------------------------------------#
-def make_msg(o):
+def objects(data):
+	global obj_r
+	obj_r = data
+	
+#-----------------------------------------------------------------------------------------------------#
+class simpleapp_tk(Tkinter.Tk):
+
+    def __init__(self,parent):
+        Tkinter.Tk.__init__(self,parent)
+        self.parent = parent
+        self.initialize()
+	self.Learn = Learning()
+	self.directory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+	self.directory = self.directory.replace("scripts", "share/");
+	self.f = open(self.directory+'language.txt', 'w')
+
+    def initialize(self):
+        self.grid()
+
+        self.entryVariable = Tkinter.StringVar()
+        self.entry = Tkinter.Entry(self,textvariable=self.entryVariable,width=130)
+        self.entry.grid(column=0,row=0,sticky='EW')
+        self.entry.bind("<Return>", self.OnPressEnter)
+        self.entryVariable.set(u"Enter sentence.")
+
+        button = Tkinter.Button(self,text=u"Add sentence",command=self.OnButtonClick)
+        button.grid(column=1,row=0)
+
+        button2 = Tkinter.Button(self,text=u"Finish",command=self.Finish)
+        button2.grid(column=2,row=0)
+
+        button3 = Tkinter.Button(self,text=u"Save",command=self.Save)
+        button3.grid(column=3,row=0)
+
+        button4 = Tkinter.Button(self,text=u"Load",command=self.Load)
+        button4.grid(column=4,row=0)
+
+        self.labelVariable = Tkinter.StringVar()
+        label = Tkinter.Label(self,textvariable=self.labelVariable,
+                              anchor="w",fg="white",bg="blue")
+        label.grid(column=0,row=1,columnspan=4,sticky='EW')
+        self.labelVariable.set(u"Ready !")
+
+        self.grid_columnconfigure(0,weight=1)
+        self.resizable(True,False)
+        self.update()
+        self.geometry(self.geometry())       
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+
+    def OnButtonClick(self):
+	global obj_r
+	msg = self.make_msg(obj_r)
+
+	sentence = self.entryVariable.get()
+	self.f.write(msg+sentence+'\n')
+	#print sentence
+	#print obj_r
+        self.labelVariable.set( sentence+" (Saved)" )
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+	print obj_r
+	print sentence
+	self.Learn.language_and_vision(sentence,obj_r)
+
+    def Finish(self):
+	self.f.write('END')
+	self.f.close()
+	print 'Finish'
+        self.labelVariable.set( "Done" )
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+
+    def Save(self):
+        self.labelVariable.set( "Saving data..")
+	self.Learn.save()
+        self.labelVariable.set( "Data saved")
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+
+    def Load(self):
+        self.labelVariable.set( "Loading data..")
+	self.Learn.load()
+        self.labelVariable.set( "Data Loaded")
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+
+    def OnPressEnter(self,event):
+        self.labelVariable.set( self.entryVariable.get()+" (Saved)" )
+        self.entry.focus_set()
+        self.entry.selection_range(0, Tkinter.END)
+
+    def make_msg(self,o):
 	def add_msg(m,k):
 	    for i in k:
 		m+=str(i)+','
@@ -107,72 +251,6 @@ def make_msg(o):
 	msg = add_msg(msg,o.direction)
 	msg+='dir,'
 	return msg
-
-#-----------------------------------------------------------------------------------------------------#
-def objects(data):
-	global obj_r
-	obj_r = data
-	
-#-----------------------------------------------------------------------------------------------------#
-class simpleapp_tk(Tkinter.Tk):
-    def __init__(self,parent):
-        Tkinter.Tk.__init__(self,parent)
-        self.parent = parent
-        self.initialize()
-
-    def initialize(self):
-        self.grid()
-
-        self.entryVariable = Tkinter.StringVar()
-        self.entry = Tkinter.Entry(self,textvariable=self.entryVariable,width=130)
-        self.entry.grid(column=0,row=0,sticky='EW')
-        self.entry.bind("<Return>", self.OnPressEnter)
-        self.entryVariable.set(u"Enter sentence.")
-
-        button = Tkinter.Button(self,text=u"Add sentence",command=self.OnButtonClick)
-        button.grid(column=1,row=0)
-
-        button2 = Tkinter.Button(self,text=u"Finish",command=self.Finish)
-        button2.grid(column=2,row=0)
-
-        self.labelVariable = Tkinter.StringVar()
-        label = Tkinter.Label(self,textvariable=self.labelVariable,
-                              anchor="w",fg="white",bg="blue")
-        label.grid(column=0,row=1,columnspan=4,sticky='EW')
-        self.labelVariable.set(u"Ready !")
-
-        self.grid_columnconfigure(0,weight=1)
-        self.resizable(True,False)
-        self.update()
-        self.geometry(self.geometry())       
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
-
-    def OnButtonClick(self):
-	global obj_r
-	msg = make_msg(obj_r)
-
-	f.write(msg+self.entryVariable.get()+'\n')
-	#print self.entryVariable.get()
-	#print obj_r
-        self.labelVariable.set( self.entryVariable.get()+" (Saved)" )
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
-	Learning(self.entryVariable.get(),obj_r)
-
-    def Finish(self):
-	global f
-	f.write('END')
-	f.close()
-	print 'Finish'
-        self.labelVariable.set( "(Done)" )
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
-
-    def OnPressEnter(self,event):
-        self.labelVariable.set( self.entryVariable.get()+" (Saved)" )
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
 
 #-----------------------------------------------------------------------------------------------------#
 def initial():

@@ -48,35 +48,36 @@ if __name__ == '__main__':
     def objects(imgmsg):
 	global xyz,x,y,c,flag1,idd
 	
-	for i in imgmsg.markers:
-		data = len(i.points)
-		x[i.id] = np.zeros(data,dtype=int)
-		y[i.id] = np.zeros(data,dtype=int)
-		c[i.id] = [int(i.color.b*255), int(i.color.g*255), int(i.color.r*255)]
-		xyz[i.id] = {}
-		xyz[i.id]['x'] = np.zeros(data,dtype=float)
-		xyz[i.id]['y'] = np.zeros(data,dtype=float)
-		xyz[i.id]['z'] = np.zeros(data,dtype=float)
-		for j in range(data):
-			k = i.points[j]
-			xyz[i.id]['x'][j] = k.x
-			xyz[i.id]['y'][j] = k.y
-			xyz[i.id]['z'][j] = k.z
-			#xyz[i.id]
-			x[i.id][j] = int(k.x * fx / k.z + cx)
-			y[i.id][j] = int(k.y * fy / k.z + cy)
+	if flag1 == 0:
+		for i in imgmsg.markers:
+			data = len(i.points)
+			x[i.id] = np.zeros(data,dtype=int)
+			y[i.id] = np.zeros(data,dtype=int)
+			c[i.id] = [int(i.color.b*255), int(i.color.g*255), int(i.color.r*255)]
+			xyz[i.id] = {}
+			xyz[i.id]['x'] = np.zeros(data,dtype=float)
+			xyz[i.id]['y'] = np.zeros(data,dtype=float)
+			xyz[i.id]['z'] = np.zeros(data,dtype=float)
+			for j in range(data):
+				k = i.points[j]
+				xyz[i.id]['x'][j] = k.x
+				xyz[i.id]['y'][j] = k.y
+				xyz[i.id]['z'][j] = k.z
+				#xyz[i.id]
+				x[i.id][j] = int(k.x * fx / k.z + cx)
+				y[i.id][j] = int(k.y * fy / k.z + cy)
 
-		idd[i.id] = 0
+			idd[i.id] = 0
 
-	for j in x.keys():
-		idd[j]+=1
-		if idd[j] == 5:
-			idd.pop(j, None)
-			x.pop(j, None)
-			y.pop(j, None)
-			c.pop(j, None)
-			xyz.pop(j,None)
-	flag1=1
+		for j in x.keys():
+			idd[j]+=1
+			if idd[j] == 5:
+				idd.pop(j, None)
+				x.pop(j, None)
+				y.pop(j, None)
+				c.pop(j, None)
+				xyz.pop(j,None)
+		flag1=1
 
 #--------------------------------------------------------------------------------------#
     def detect_and_draw(imgmsg):

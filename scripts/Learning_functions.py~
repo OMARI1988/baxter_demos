@@ -63,6 +63,7 @@ def Update_dis_histogram_use_CK(hyp,o_qsr,sentence):
 	o1 = 0
 	o2 = 0
 	for j in sentence.split(' '):
+		print j
 		if flag == 0:
 			if j in hyp['objects_hyp']:
 				#print j,hyp['objects_hyp'].index(j),'------------Start'
@@ -452,12 +453,12 @@ def sentence_parsing(hyp,sentence):
 		if j not in hyp['hyp']:
 			hyp['hyp'][j] = {}
 			hyp['hyp'][j]['counter_HSV'] = 0	
-			hyp['hyp'][j]['hist_HSV'] = np.zeros(shape=(201,201,101))
-			hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101))
+			hyp['hyp'][j]['hist_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
+			hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
 			hyp['hyp'][j]['not_a_hyp_HSV'] = 0
 			hyp['hyp'][j]['counter_SPA'] = 0
-			hyp['hyp'][j]['hist_SPA'] = np.zeros(shape=(201,201,101))
-			hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101))
+			hyp['hyp'][j]['hist_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
+			hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
 			hyp['hyp'][j]['not_a_hyp_SPA'] = 0
 
 			hyp['hyp'][j]['counter_dis'] = 0	
