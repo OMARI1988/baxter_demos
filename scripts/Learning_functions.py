@@ -63,32 +63,30 @@ def Update_dis_histogram_use_CK(hyp,o_qsr,sentence):
 	o1 = 0
 	o2 = 0
 	for j in sentence.split(' '):
-		print j
 		if flag == 0:
 			if j in hyp['objects_hyp']:
-				#print j,hyp['objects_hyp'].index(j),'------------Start'
 				o1 = hyp['objects_hyp'].index(j)
 				flag = 1
 		elif flag == 1:
 			if j in hyp['objects_hyp']:
-				#print j,hyp['objects_hyp'].index(j),'------------Stop'
 				o2 = hyp['objects_hyp'].index(j)
 				flag = 0
-				if o1 != o2:				#----------- check if o1 and o2 are different
-				####################### you can easily learn direction by checking if o1 is < or > o2 and choose which angle
-					#print o1,'-',o2,':',words
+				if o1 != o2:		#----------- check if o1 and o2 are different
 					if o1>o2:
-						k=o2
+						kk=o2
 						o2=o1
-						o1=k
+						o1=kk
 					for k in words:
 						if k not in hyp['valid_HSV_hyp']:
 							hyp['hyp'][k]['counter_dis']+=1
-							#A = o_qsr['obj_number']
-							#for p in range(A-1):
-							#	for k in range(p+1,A):
-							d = o_qsr[str(o1)+'-'+str(o2)+'-dis']
-							hyp['hyp'][k]['hist_dis'][int(d)] += 1
+							d = int(o_qsr[str(o1)+'-'+str(o2)+'-dis'])	#in m
+							if d in hyp['hyp'][k]['hist_dis']:
+								hyp['hyp'][k]['hist_dis'][d] += 1
+								hyp['hyp'][k]['hist_dis_x'].append(d)
+							else:
+								hyp['hyp'][k]['hist_dis'][d] = 1
+								hyp['hyp'][k]['hist_dis_x'].append(d)
+
 				words = []
 			else:
 				words.append(j)
@@ -101,17 +99,17 @@ def Update_dis_histogram(hyp,o_qsr):
 		if j not in hyp['valid_HSV_hyp']:
 			hyp['hyp'][j]['counter_dis']+=1
 			A = o_qsr['obj_number']
-			"""
-			if A==1:
-				d = o_qsr[str(0)+'-'+str(1)+'-dis']
-				hyp['hyp'][j]['hist_dis'][int(d)] += 1
 
-			else:
-			"""
 			for p in range(A-1):
 				for k in range(p+1,A):
-					d = o_qsr[str(p)+'-'+str(k)+'-dis']
-					hyp['hyp'][j]['hist_dis'][int(d)] += 1	
+					d = int(o_qsr[str(o1)+'-'+str(o2)+'-dis'])	#in m
+					
+					if d in hyp['hyp'][j]['hist_dis']:
+						hyp['hyp'][j]['hist_dis'][d] += 1
+						hyp['hyp'][j]['hist_dis_x'].append(d)
+					else:
+						hyp['hyp'][j]['hist_dis'][d] = 1
+						hyp['hyp'][j]['hist_dis_x'].append(d)	
 	return hyp
 
 #-------------------------------------------------------------------------------------#
@@ -120,41 +118,51 @@ def Compute_dis_hypotheses(hyp):
 
 	for j in hyp['hyp']:
 	    if j not in hyp['valid_HSV_hyp'] and hyp['hyp'][j]['counter_dis']!=0:
-		hyp['hyp'][j]['score_dis'] = np.zeros(shape=(1000))		# up to 1000 pixel
+		X = hyp['hyp'][j]['hist_dis_x']
 		flag = 0
-		for m in range(20,200,20):
-		    for k in range(1000-m):
-			if np.sum(hyp['hyp'][j]['hist_dis'][k:m+k])>=hyp['hyp'][j]['counter_dis']*.9:
-				hyp['hyp'][j]['score_dis'][k:m+k]=1
-				flag=1
+
+		for kk in [50,100]:
+		    for jj in range(len(X)):
+			x1 = X[jj]-kk
+			x2 = X[jj]+kk
+
+			hist_sum = 0
+			keys = []
+			for key in hyp['hyp'][j]['hist_dis']:
+			    if key != 'x':
+				if key>x1 and key<x2:
+				    	hist_sum += hyp['hyp'][j]['hist_dis'][key]
+					keys.append(key)
+
+			# see if a cube in the hitogram can be valid to be a hypothesis
+			if  hist_sum >= hyp['hyp'][j]['counter_dis']*.9:
+				for key in keys:
+					hyp['hyp'][j]['score_dis_x'].append(key)
+				flag = 1
 
 		    if flag == 1:	# hypothesis has been found
 			hyp['valid_dis_hyp'].append(j)
 			break
 
 	for j in hyp['valid_dis_hyp']:
+
 		hyp['hyp'][j]['dis_points_x'] = []
-		hyp['hyp'][j]['dis_points_y'] = []
-		hyp['hyp'][j]['dis_points_z'] = []
-		A = np.nonzero(hyp['hyp'][j]['score_dis'])
-		B = np.nonzero(hyp['hyp'][j]['hist_dis'])
-		for p in range(len(B[0])):
-			if B[0][p] in A[0]:
-				d = B[0][p]/700.0
+		X = hyp['hyp'][j]['hist_dis_x']
+		X2 = hyp['hyp'][j]['score_dis_x']
+
+		for p in range(len(X)):
+			if X[p] in X2:
+				d = X[p]/700.0
 				hyp['hyp'][j]['dis_points_x'].append(d)
 
 
 		hyp['hyp'][j]['dis_points_x_mean'] = np.mean(hyp['hyp'][j]['dis_points_x'])
-		hyp['hyp'][j]['dis_points_y_mean'] = 0
-		hyp['hyp'][j]['dis_points_z_mean'] = 0
-
 		hyp['hyp'][j]['dis_points_x_std'] = np.std(hyp['hyp'][j]['dis_points_x'])
-		hyp['hyp'][j]['dis_points_y_std'] = 0
-		hyp['hyp'][j]['dis_points_z_std'] = 0
-								
+					
 	return hyp
 #-------------------------------------------------------------------------------------#
 def Update_dir_histogram_use_CK(hyp,o_qsr,sentence):
+
 
 	# Use the consulidated knowledge
 	
@@ -165,177 +173,139 @@ def Update_dir_histogram_use_CK(hyp,o_qsr,sentence):
 	for j in sentence.split(' '):
 		if flag == 0:
 			if j in hyp['objects_hyp']:
-				#print j,hyp['objects_hyp'].index(j),'------------Start'
 				o1 = hyp['objects_hyp'].index(j)
 				flag = 1
 		elif flag == 1:
 			if j in hyp['objects_hyp']:
-				#print j,hyp['objects_hyp'].index(j),'------------Stop'
 				o2 = hyp['objects_hyp'].index(j)
 				flag = 0
-				if o1 != o2:				#----------- check if o1 and o2 are different
-				####################### you can easily learn direction by checking if o1 is < or > o2 and choose which angle
-					#print o1,'-',o2,':',words
+				if o1 != o2:		#----------- check if o1 and o2 are different
 					if o1>o2:
 						k=o2
 						o2=o1
 						o1=k
-						o_qsr[str(o1)+'-'+str(o2)+'-ang'] = -o_qsr[str(o1)+'-'+str(o2)+'-ang']	# the other relation
+						o_qsr[str(o1)+'-'+str(o2)+'-ang'] = -o_qsr[str(o1)+'-'+str(o2)+'-ang'] 	# the other relation
 
 					for k in words:
 						if k not in hyp['valid_HSV_hyp']:
 							hyp['hyp'][k]['counter_dir']+=1
-							#A = o_qsr['obj_number']
-							#for p in range(A-1):
-							#	for k in range(p+1,A):
 							a = o_qsr[str(o1)+'-'+str(o2)+'-ang']*180/np.pi
 							if a<0:
 								a=a+360
-							hyp['hyp'][k]['hist_dir'][int(a)] += 1
+							
+							if a in hyp['hyp'][k]['hist_dir']:
+								hyp['hyp'][k]['hist_dir'][a] += 1
+								hyp['hyp'][k]['hist_dir_x'].append(a)
+							else:
+								hyp['hyp'][k]['hist_dir'][a] = 1
+								hyp['hyp'][k]['hist_dir_x'].append(a)
 				words = []
 			else:
 				words.append(j)
 	return hyp
 			
 
+#-------------------------------------------------------------------------------------#
 def Update_dir_histogram(hyp,o_qsr):
+
+
 	for j in hyp['words']:
 		if j not in hyp['valid_HSV_hyp']:
 			hyp['hyp'][j]['counter_dir']+=1
 			A = o_qsr['obj_number']
+
 			for p in range(A-1):
 				for k in range(p+1,A):
 					a = o_qsr[str(0)+'-'+str(1)+'-ang']*180/np.pi
 					if a<0:
 						a=a+360
-					hyp['hyp'][j]['hist_dir'][int(a)] += 1
+							
+					if a in hyp['hyp'][j]['hist_dir']:
+						hyp['hyp'][j]['hist_dir'][a] += 1
+						hyp['hyp'][j]['hist_dir_x'].append(a)
+					else:
+						hyp['hyp'][j]['hist_dir'][a] = 1
+						hyp['hyp'][j]['hist_dir_x'].append(a)	
 	return hyp
 
-#-------------------------------------------------------------------------------------#
+#-------------------------------------------------------------------------------------
 def Compute_dir_hypotheses(hyp):
 	hyp['valid_dir_hyp'] = []
 	window = 361
 
 	for j in hyp['hyp']:
 	    if j not in hyp['valid_HSV_hyp'] and hyp['hyp'][j]['counter_dir']!=0:
-		hyp['hyp'][j]['score_dir'] = np.zeros(shape=(360))		# up to 1000 pixel
+
+		X = hyp['hyp'][j]['hist_dir_x']
 		flag = 0
-		for m in range(20,190,20):
-		    W=m
-		    for k in range(361):
-			if W+k-1 < (361):		# to make the circular thing continous
-				if np.sum(hyp['hyp'][j]['hist_dir'][k:m+k])>=hyp['hyp'][j]['counter_dir']*.9:
-					hyp['hyp'][j]['score_dir'][k:m+k]=1
-					flag=1
+
+		for kk in [45,90]:
+		    for jj in range(len(X)):
+			x1 = X[jj]-kk
+			x2 = X[jj]+kk
+
+			hist_sum = 0
+			keys = []
+
+			if x2 < (361):		# to make the circular thing continous
+				for key in hyp['hyp'][j]['hist_dir']:
+				    if key != 'x':
+					if key>x1 and key<x2:
+					    	hist_sum += hyp['hyp'][j]['hist_dir'][key]
+						keys.append(key)
 			else:
-				A = np.sum(hyp['hyp'][j]['hist_dir'][0:-(window-1)+k+W])
-				B = np.sum(hyp['hyp'][j]['hist_dir'][k:(window-1)])
-				if A+B>=hyp['hyp'][j]['counter_dir']*.9:
-					hyp['hyp'][j]['score_dir'][0:-(window-1)+k+W] = 1
-					hyp['hyp'][j]['score_dir'][k:(window-1)] = 1
-					flag = 1
+				for key in hyp['hyp'][j]['hist_dir']:
+				    if key != 'x':
+					if (key>x1 and key<361) or (key>0 and key<(x2-361)):
+					    	hist_sum += hyp['hyp'][j]['hist_dir'][key]
+						keys.append(key)
+
+			# see if a cube in the hitogram can be valid to be a hypothesis
+			if  hist_sum >= hyp['hyp'][j]['counter_dir']*.9:
+				for key in keys:
+					hyp['hyp'][j]['score_dir_x'].append(key)
+				flag = 1
 
 		    if flag == 1:	# hypothesis has been found
 			hyp['valid_dir_hyp'].append(j)
 			break
 
+
 	for j in hyp['valid_dir_hyp']:
+
 		hyp['hyp'][j]['dir_points_x'] = []
-		hyp['hyp'][j]['dir_points_y'] = []
-		hyp['hyp'][j]['dir_points_z'] = []
-		A = np.nonzero(hyp['hyp'][j]['score_dir'])
-		B = np.nonzero(hyp['hyp'][j]['hist_dir'])
-		for p in range(len(B[0])):
-			if B[0][p] in A[0]:
-				d = B[0][p]
+		X = hyp['hyp'][j]['hist_dir_x']
+		X2 = hyp['hyp'][j]['score_dir_x']
+
+		for p in range(len(X)):
+			if X[p] in X2:
+				d = X[p]
 				hyp['hyp'][j]['dir_points_x'].append(d)
 
 		hyp['hyp'][j]['dir_points_x_mean'] = circ_mean(hyp['hyp'][j]['dir_points_x'], low=0, high=360)
 		hyp['hyp'][j]['dir_points_x_std'] = circ_std(hyp['hyp'][j]['dir_points_x'], low=0, high=360)
-								
-	return hyp
-
-#-------------------------------------------------------------------------------------#
-def Update_SPA_histogram(o_qsr,POINTS):
-
-	#for j in hyp['words']:
-	#	if j not in hyp['valid_HSV_hyp']:
-	#		hyp['hyp'][j]['counter_SPA']+=1
 			
-	#		hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101))
+	return hyp
+					
+#-------------------------------------------------------------------------------------#
+def Update_SPA_points(o_qsr,POINTS):
+
 	A = o_qsr['obj_number']
 	for p in range(A-1):
 		for k in range(p+1,A):
-			d = o_qsr[str(p)+'-'+str(k)+'-dis']
+			d = o_qsr[str(p)+'-'+str(k)+'-dis']/700
 			a = o_qsr[str(p)+'-'+str(k)+'-ang']*180/np.pi
 			xs,ys,zs = HSV_to_XYZ(a, d, 0.5)		# in this case Z is always to zero
 			x = int(xs[0]*100+100)
 			y = int(ys[0]*100+100)
 			z = int(zs[0]*100)
-			#hyp['hyp'][j]['hist_SPA'][x,y,z] += 1
 			POINTS.append([xs,ys,zs,1.0,1.0,1.0])
 				
 	return POINTS
 
-#-------------------------------------------------------------------------------------#
-def Compute_SPA_hypotheses(hyp):
-	#============== create a set of believes for SPA ===============#
-	hyp['valid_SPA_hyp'] = []
-
-	for j in hyp['hyp']:
-	    if hyp['hyp'][j]['not_a_hyp_SPA']<10:
-		X,Y,Z = np.nonzero(hyp['hyp'][j]['hist_SPA'])	# loop through the histogram values
-		flag = 0
-
-		for kk in [12,15,18,20,23,25]:
-		    for jj in range(len(X)):
-			x1 = X[jj]-kk
-			x2 = X[jj]+kk
-			y1 = Y[jj]-kk
-			y2 = Y[jj]+kk
-			z1 = Z[jj]-kk
-			z2 = Z[jj]+kk
-			x1,x2 = check(x1,x2,0,200)
-			y1,y2 = check(y1,y2,0,200)
-			z1,z2 = check(z1,z2,0,100)
-
-			# see if a cube in the hitogram can be valid to be a hypothesis
-			if  np.sum(hyp['hyp'][j]['hist_SPA'][x1:x2,y1:y2,z1:z2]) >= hyp['hyp'][j]['counter_SPA']*.9:
-				hyp['hyp'][j]['score_SPA'][x1:x2,y1:y2,z1:z2] = 1
-				flag = 1
-
-		    if flag == 1:	# hypothesis has been found
-			hyp['valid_SPA_hyp'].append(j)
-			break
-
-		    if kk==25:
-			hyp['hyp'][j]['not_a_hyp_SPA']+=1
-
-	for j in hyp['valid_SPA_hyp']:
-		hyp['hyp'][j]['SPA_points_x'] = []
-		hyp['hyp'][j]['SPA_points_y'] = []
-		hyp['hyp'][j]['SPA_points_z'] = []
-		A = np.nonzero(hyp['hyp'][j]['score_SPA'])
-		B = np.nonzero(hyp['hyp'][j]['hist_SPA'])
-		for p in range(len(B[0])):
-			if B[0][p] in A[0] and B[1][p] in A[1] and B[2][p] in A[2]:
-				hyp['hyp'][j]['SPA_points_x'].append((B[0][p]-100)/100.0)
-				hyp['hyp'][j]['SPA_points_y'].append((B[1][p]-100)/100.0)
-				hyp['hyp'][j]['SPA_points_z'].append(B[2][p]/100.0)
-
-
-		hyp['hyp'][j]['SPA_points_x_mean'] = np.mean(hyp['hyp'][j]['SPA_points_x'])
-		hyp['hyp'][j]['SPA_points_y_mean'] = np.mean(hyp['hyp'][j]['SPA_points_y'])
-		hyp['hyp'][j]['SPA_points_z_mean'] = np.mean(hyp['hyp'][j]['SPA_points_z'])
-
-		hyp['hyp'][j]['SPA_points_x_std'] = np.std(hyp['hyp'][j]['SPA_points_x'])
-		hyp['hyp'][j]['SPA_points_y_std'] = np.std(hyp['hyp'][j]['SPA_points_y'])
-		hyp['hyp'][j]['SPA_points_z_std'] = np.std(hyp['hyp'][j]['SPA_points_z'])
-		
-	return hyp
 
 #-------------------------------------------------------------------------------------#
-def Test_HSV_Hypotheses(hyp,o_color,sentence):
+def Test_HSV_Hypotheses(hyp,o_color):
 	hyp['objects'] = {}
 	hyp['objects_hyp'] = []
 	for i in range(len( o_color['H'])):
@@ -368,12 +338,83 @@ def Test_HSV_Hypotheses(hyp,o_color,sentence):
 	return hyp
 
 
+#-------------------------------------------------------------------------------------#
+def Test_Relation_Hypotheses(hyp,o_qsr):
+	hyp['relations'] = {}
+	hyp['relations']['dis'] = {}
+	hyp['relations']['dir'] = {}
+	hyp['relations_hyp'] = {}
+	hyp['relations_hyp']['dis'] = []
+	hyp['relations_hyp']['dir'] = []
+
+	if 'valid_dis_hyp' in hyp:
+	    if hyp['valid_dis_hyp'] != []:
+		for i in range(len( o_qsr[0])):
+			hyp['relations']['dis'][i] = ''
+			A = np.matrix([o_qsr[0][i]])
+		
+			var = 0
+			for j in hyp['valid_dis_hyp']:
+				X = hyp['hyp'][j]['dis_points_x_mean']
+				Xs= hyp['hyp'][j]['dis_points_x_std']
+				B = np.matrix([X])
+				result = norm_pdf_multivariate(A, B, np.matrix([[Xs]]))
+				if var<result:
+					hyp['relations']['dis'][i] = j
+					var = result
+
+			hyp['relations_hyp']['dis'].append(hyp['relations']['dis'][i])
+	    else:
+		# initilize with empty
+		for i in range(len( o_qsr[0])):
+			hyp['relations_hyp']['dis'].append('')
+
+
+	    if hyp['valid_dir_hyp'] != []:
+		for i in range(len( o_qsr[1])):
+			hyp['relations']['dir'][i] = ''
+			A = np.matrix([o_qsr[1][i]*180/np.pi])
+		
+			var = 0
+			for j in hyp['valid_dir_hyp']:
+				X = hyp['hyp'][j]['dir_points_x_mean']
+				Xs= hyp['hyp'][j]['dir_points_x_std']
+				B = np.matrix([X])
+				result = norm_pdf_multivariate(A, B, np.matrix([[Xs]]))
+				if var<result:
+					hyp['relations']['dir'][i] = j
+					var = result
+				########## ASK ERIS TO GIVE CIRCULER NORM ########
+				if j=='right':
+					X = hyp['hyp'][j]['dir_points_x_mean']-360
+					Xs= hyp['hyp'][j]['dir_points_x_std']
+					B = np.matrix([X])
+					result = norm_pdf_multivariate(A, B, np.matrix([[Xs]]))
+					if var<result:
+						hyp['relations']['dir'][i] = j
+						var = result
+					
+
+			hyp['relations_hyp']['dir'].append(hyp['relations']['dir'][i])
+	    else:
+		# initilize with empty
+		for i in range(len( o_qsr[1])):
+			hyp['relations_hyp']['dir'].append('')
+
+	else:
+		# initilize with empty
+		for i in range(len( o_qsr[0])):
+			hyp['relations_hyp']['dis'].append('')
+			hyp['relations_hyp']['dir'].append('')
+	return hyp
 
 #-------------------------------------------------------------------------------------#
 def Update_HSV_histogram(hyp,o_color,POINTS):
 
 	for j in hyp['words']:
-		hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101))
+		hyp['hyp'][j]['score_HSV_x'] = []
+		hyp['hyp'][j]['score_HSV_y'] = []
+		hyp['hyp'][j]['score_HSV_z'] = []
 		for p in range(len(o_color['H'])):
 			H = o_color['H'][p]
 			S = o_color['S'][p]
@@ -382,10 +423,16 @@ def Update_HSV_histogram(hyp,o_color,POINTS):
 			x = int(xs[0]*100+100)
 			y = int(ys[0]*100+100)
 			z = int(zs[0]*100)
-			hyp['hyp'][j]['hist_HSV'][x,y,z] += 1
+			if (x,y,z) in hyp['hyp'][j]['hist_HSV']:
+				hyp['hyp'][j]['hist_HSV'][(x,y,z)] += 1
+			else:
+				hyp['hyp'][j]['hist_HSV'][(x,y,z)] = 1
+				hyp['hyp'][j]['hist_HSV_x'].append(x)
+				hyp['hyp'][j]['hist_HSV_y'].append(y)
+				hyp['hyp'][j]['hist_HSV_z'].append(z)
+
 			R,G,B = HSV_to_RGB(H,S,V)
 			POINTS.append([xs,ys,zs,R,G,B])
-
 	return hyp,POINTS
 
 #-------------------------------------------------------------------------------------#
@@ -395,10 +442,11 @@ def Compute_HSV_hypotheses(hyp):
 	hyp['valid_HSV_hyp'] = []
 
 	for j in hyp['hyp']:
-	    if hyp['hyp'][j]['not_a_hyp_HSV']<5:
-		X,Y,Z = np.nonzero(hyp['hyp'][j]['hist_HSV'])	# loop through the histogram values
+		X = hyp['hyp'][j]['hist_HSV_x']
+		Y = hyp['hyp'][j]['hist_HSV_y']
+		Z = hyp['hyp'][j]['hist_HSV_z']
 		flag = 0
-		for kk in [12,15,18,20,23,25]:
+		for kk in [15,20,30]:
 		    for jj in range(len(X)):
 			x1 = X[jj]-kk
 			x2 = X[jj]+kk
@@ -406,33 +454,45 @@ def Compute_HSV_hypotheses(hyp):
 			y2 = Y[jj]+kk
 			z1 = Z[jj]-kk
 			z2 = Z[jj]+kk
-			x1,x2 = check(x1,x2,0,200)
-			y1,y2 = check(y1,y2,0,200)
-			z1,z2 = check(z1,z2,0,100)
+
+			hist_sum = 0
+			keys = []
+			for key in hyp['hyp'][j]['hist_HSV']:
+			    if key[0] != 'x':
+				if key[0]>x1 and key[0]<x2 and key[1]>y1 and key[1]<y2 and key[2]>z1 and key[2]<z2:
+				    	hist_sum += hyp['hyp'][j]['hist_HSV'][key]
+					keys.append(key)
 
 			# see if a cube in the hitogram can be valid to be a hypothesis
-			if  np.sum(hyp['hyp'][j]['hist_HSV'][x1:x2,y1:y2,z1:z2]) >= hyp['hyp'][j]['counter_HSV']*.9:
-				hyp['hyp'][j]['score_HSV'][x1:x2,y1:y2,z1:z2] = 1
+			if  hist_sum >= hyp['hyp'][j]['counter_HSV']*.9:
+				for key in keys:
+					hyp['hyp'][j]['score_HSV_x'].append(key[0])
+					hyp['hyp'][j]['score_HSV_y'].append(key[1])
+					hyp['hyp'][j]['score_HSV_z'].append(key[2])
 				flag = 1
 
 		    if flag == 1:	# hypothesis has been found
 			hyp['valid_HSV_hyp'].append(j)
 			break
 
-		    if kk==25:
-			hyp['hyp'][j]['not_a_hyp_HSV']+=1
-
 	for j in hyp['valid_HSV_hyp']:
 		hyp['hyp'][j]['HSV_points_x'] = []
 		hyp['hyp'][j]['HSV_points_y'] = []
 		hyp['hyp'][j]['HSV_points_z'] = []
-		A = np.nonzero(hyp['hyp'][j]['score_HSV'])
-		B = np.nonzero(hyp['hyp'][j]['hist_HSV'])
-		for p in range(len(B[0])):
-			if B[0][p] in A[0] and B[1][p] in A[1] and B[2][p] in A[2]:
-				hyp['hyp'][j]['HSV_points_x'].append((B[0][p]-100)/100.0)
-				hyp['hyp'][j]['HSV_points_y'].append((B[1][p]-100)/100.0)
-				hyp['hyp'][j]['HSV_points_z'].append(B[2][p]/100.0)
+
+		X = hyp['hyp'][j]['hist_HSV_x']
+		Y = hyp['hyp'][j]['hist_HSV_y']
+		Z = hyp['hyp'][j]['hist_HSV_z']
+
+		X2 = hyp['hyp'][j]['score_HSV_x']
+		Y2 = hyp['hyp'][j]['score_HSV_y']
+		Z2 = hyp['hyp'][j]['score_HSV_z']
+
+		for p in range(len(X)):
+			if X[p] in X2 and Y[p] in Y2 and Z[p] in Z2:
+				hyp['hyp'][j]['HSV_points_x'].append((X[p]-100)/100.0)
+				hyp['hyp'][j]['HSV_points_y'].append((Y[p]-100)/100.0)
+				hyp['hyp'][j]['HSV_points_z'].append(Z[p]/100.0)
 
 
 		hyp['hyp'][j]['HSV_points_x_mean'] = np.mean(hyp['hyp'][j]['HSV_points_x'])
@@ -453,20 +513,30 @@ def sentence_parsing(hyp,sentence):
 		if j not in hyp['hyp']:
 			hyp['hyp'][j] = {}
 			hyp['hyp'][j]['counter_HSV'] = 0	
-			hyp['hyp'][j]['hist_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
-			hyp['hyp'][j]['score_HSV'] = np.zeros(shape=(201,201,101),dtype=np.int16)
-			hyp['hyp'][j]['not_a_hyp_HSV'] = 0
-			hyp['hyp'][j]['counter_SPA'] = 0
-			hyp['hyp'][j]['hist_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
-			hyp['hyp'][j]['score_SPA'] = np.zeros(shape=(201,201,101),dtype=np.int16)
-			hyp['hyp'][j]['not_a_hyp_SPA'] = 0
+			hyp['hyp'][j]['hist_HSV'] = {}
+			hyp['hyp'][j]['hist_HSV_x'] = []
+			hyp['hyp'][j]['hist_HSV_y'] = []
+			hyp['hyp'][j]['hist_HSV_z'] = []
+			hyp['hyp'][j]['score_HSV'] = {}
+			hyp['hyp'][j]['score_HSV_x'] = []
+			hyp['hyp'][j]['score_HSV_y'] = []
+			hyp['hyp'][j]['score_HSV_z'] = []
 
 			hyp['hyp'][j]['counter_dis'] = 0	
-			hyp['hyp'][j]['hist_dis'] = np.zeros(shape=(1000),dtype=np.int16)		# up to 1000 pixel
-			hyp['hyp'][j]['score_dis'] = np.zeros(shape=(1000),dtype=np.int16)		# up to 1000 pixel
+			#hyp['hyp'][j]['hist_dis'] = np.zeros(shape=(1000),dtype=np.int16)		
+			#hyp['hyp'][j]['score_dis'] = np.zeros(shape=(1000),dtype=np.int16)
+			hyp['hyp'][j]['hist_dis'] = {}
+			hyp['hyp'][j]['hist_dis_x'] = []
+			hyp['hyp'][j]['score_dis'] = {}
+			hyp['hyp'][j]['score_dis_x'] = []		
+
 			hyp['hyp'][j]['counter_dir'] = 0
-			hyp['hyp'][j]['hist_dir'] = np.zeros(shape=(360),dtype=np.int16)		# up to 1000 pixel
-			hyp['hyp'][j]['score_dir'] = np.zeros(shape=(360),dtype=np.int16)		# up to 1000 pixel
+			#hyp['hyp'][j]['hist_dir'] = np.zeros(shape=(360),dtype=np.int16)
+			#hyp['hyp'][j]['score_dir'] = np.zeros(shape=(360),dtype=np.int16)
+			hyp['hyp'][j]['hist_dir'] = {}
+			hyp['hyp'][j]['hist_dir_x'] = []
+			hyp['hyp'][j]['score_dir'] = {}
+			hyp['hyp'][j]['score_dir_x'] = []		
 
 		if j not in hyp['words']:
 			hyp['words'].append(j)	
@@ -490,8 +560,6 @@ def HSV_to_XYZ(H, S, V):
 def check(b1,b2,a,b):
 	if b1<a:
 		b1=a
-	#if b2>b:
-	#	b2=b
 	return b1,b2
 
 #-------------------------------------------------------------------------------------#

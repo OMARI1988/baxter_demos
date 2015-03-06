@@ -52,8 +52,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
  add_message_files(
-    obj_relations.msg
-#   FILES
+   FILES
+   obj_relations.msg
 #   Message1.msg
 #   Message2.msg
  )

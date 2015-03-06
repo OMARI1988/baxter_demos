@@ -12,11 +12,12 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 #import scipy.ndimage.morphology as morphology
-from baxter_demos.msg import obj_relations
+from baxter_demos.msg import obj_relations,obj_hypotheses
 import visualization_msgs.msg
 import colorsys
 
-global img,x,y,c,flag1,flag2
+global img,x,y,c,flag1,flag2,hyp
+hyp=[]
 img = []
 x={}
 y={}
@@ -41,7 +42,9 @@ if __name__ == '__main__':
     def direction_calc(A,B):
 	X = A[0]-B[0]
 	Y = A[1]-B[1]
-	C = np.arctan2(Y,X)/np.pi
+	C = np.arctan2(Y,X)
+	if C<0:
+		C=C+np.pi
 	#int(C*100)/100.0
 	return C
 #--------------------------------------------------------------------------------------#
@@ -77,7 +80,13 @@ if __name__ == '__main__':
 				y.pop(j, None)
 				c.pop(j, None)
 				xyz.pop(j,None)
-	flag1=1
+		flag1=1
+
+#--------------------------------------------------------------------------------------#
+    def hypotheses(data):
+	global hyp
+	hyp = data
+
 
 #--------------------------------------------------------------------------------------#
     def detect_and_draw(imgmsg):
@@ -88,7 +97,7 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def talker():
-	global img,x,y,c,flag1,flag2,xyz
+	global img,x,y,c,flag1,flag2,xyz,hyp
 	while not rospy.is_shutdown():
 		if flag1==1 and flag2==1:
 			img2 = img.copy()
@@ -105,6 +114,8 @@ if __name__ == '__main__':
 			H = []
 			S = []
 			V = []
+			X_img = []
+			Y_img = []
 			distance = []
 			direction = []
 			for i in x2:
@@ -121,6 +132,9 @@ if __name__ == '__main__':
 
 				X2 = int(np.mean(x2[i]))
 				Y2 = int(np.mean(y2[i]))
+
+				X_img.append(X2)
+				Y_img.append(Y2)
 
 				hsv = colorsys.rgb_to_hsv(r_val/255.0,g_val/255.0,b_val/255.0)
 				H.append(int(hsv[0]*360))
@@ -146,11 +160,22 @@ if __name__ == '__main__':
 					
 					dis = np.sqrt(  (np.abs(xi-xj))**2  +  (np.abs(yi-yj))**2  +  (np.abs(zi-zj))**2  )
 					dirr = direction_calc([xi,yi],[xj,yj])
-					cv2.putText(img2,"distance [%s,%s] = %4.2f" % (i,j,dis), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+					cv2.putText(img2,"relations [%s,%s] = (d,%4.2f), (a,%4.2f)" % (i,j,dis,dirr*180/np.pi), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 					counter+=1
 					distance.append(dis)
 					direction.append(dirr)
-			pub.publish(ID,distance,direction,H,S,V)
+
+			if hyp != []:
+			    if len(hyp.obj) == len(hyp.Ximg):
+				for i in range(len(hyp.obj)):
+					X2 = hyp.Ximg[i]
+					Y2 = hyp.Yimg[i]
+					cv2.putText(img2,"hyp = %s" % (hyp.obj[i]), (X2,Y2+45), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+
+				for counter in range(len(hyp.distance)):
+					cv2.putText(img2,"(d,%s), (a,%s)" % (hyp.distance[counter],hyp.direction[counter]), (380,480-20*(counter+1)), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+						
+			pub.publish(ID,distance,direction,H,S,V,X_img,Y_img)
 
 			#print xi ,yi ,zi
 
@@ -198,6 +223,7 @@ if __name__ == '__main__':
     rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, objects)
 
     pub = rospy.Publisher('obj_relations', obj_relations, queue_size=1)
+    rospy.Subscriber('/obj_hypotheses', obj_hypotheses, hypotheses)
     talker()
 
     rospy.spin()

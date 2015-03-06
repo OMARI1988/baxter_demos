@@ -4,3 +4,5 @@ float64[] direction
 int16[] H
 float64[] S
 float64[] V
+int16[] Ximg
+int16[] Yimg
