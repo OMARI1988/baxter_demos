@@ -17,6 +17,9 @@ from visualization_msgs.msg import *
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from sensor_msgs.msg import Image
+import cv_bridge
+
 #-----------------------------------------------------------------------------------------------------#
 global obj_r,Learn
 obj_r = []
@@ -63,6 +66,9 @@ class Learning:
 	print ' - loading data..'
 	data1 = pickle.load(pkl_file)
 	print ' - file loaded..'
+	self.hyp['valid_HSV_hyp'] = []
+	self.hyp['valid_dis_hyp'] = []
+	self.hyp['valid_dir_hyp'] = []
 	self.POINTS_HSV = data1['HSV']
 	self.POINTS_SPA = data1['SPA']
 	self.hyp = data1['hyp']
@@ -135,6 +141,12 @@ class Learning:
 	self.hyp = Test_Relation_Hypotheses(self.hyp,o_rel)				# check to see if objects match any of the hypotheses
 
 
+
+
+
+
+
+
         #int_marker = create_object_marker(idd,x,y,z)
         #server.insert(int_marker, objFeedback)
         #server.applyChanges()
@@ -204,7 +216,8 @@ class simpleapp_tk(Tkinter.Tk):
     def OnButtonClick(self):
 	global obj_r
 	msg = self.make_msg(obj_r)
-
+	
+	self.send_image('happy')
 	sentence = self.entryVariable.get()
 	self.f.write(msg+sentence+'\n')
 	#print sentence
@@ -213,6 +226,7 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
 	Learn.language_and_vision(sentence,obj_r)
+	self.send_image('default')
 
     def Finish(self):
 	#self.f.write('END')
@@ -265,13 +279,31 @@ class simpleapp_tk(Tkinter.Tk):
 	msg+='dir,'
 	return msg
 
+    def send_image(self,img_name):
+	"""
+	Send the image located at the specified path to the head
+	display on Baxter.
+
+	@param path: path to the image file to load and send
+	"""
+	dirr = '/home/omari/ros_ws/src/baxter_demos/share/images/'
+	path = dirr+img_name+'.png'
+	img = cv2.imread(path)
+	msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
+	pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
+	pub.publish(msg)
+	rospy.sleep(1)
+    # Sleep to allow for image to be published.
+
+
+
 #-----------------------------------------------------------------------------------------------------#
 def initial():
 	global obj_r,Learn,pub
 	rospy.init_node('Language_GUI')
+	Learn = Learning()
 	rospy.Subscriber('/obj_relations', obj_relations, objects)
 	server = InteractiveMarkerServer("object_features")
-	Learn = Learning()
 	pub = rospy.Publisher('obj_hypotheses', obj_hypotheses, queue_size=1)
 
 
