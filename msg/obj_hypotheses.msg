@@ -3,3 +3,7 @@ string[] distance
 string[] direction
 int16[] Ximg
 int16[] Yimg
+float64[] X
+float64[] Y
+float64[] Z
+float64[] yaw

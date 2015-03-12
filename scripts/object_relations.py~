@@ -14,7 +14,9 @@ import numpy as np
 #import scipy.ndimage.morphology as morphology
 from baxter_demos.msg import obj_relations,obj_hypotheses
 import visualization_msgs.msg
+from geometry_msgs.msg import Pose,Point
 import colorsys
+#from geometry_msgs.msg import Pose,Point
 
 global img,x,y,c,flag1,flag2,hyp
 hyp=[]
@@ -35,10 +37,40 @@ cy = 239.5
 th = 10
 sp = 5
 
+rx = 0.0
+ry = 0.7854
+rz = 0.0
+cosy = np.cos(ry)
+siny = np.sin(ry)
+
+dx = 0.22
+dy = 0.08
+dz = 0.18
+
 if __name__ == '__main__':
 
     br = CvBridge()	# Create a black image, a window
 
+
+
+#--------------------------------------------------------------------------------------#
+    def camera_to_torso(p):
+
+	# rotate frames around y axis and then offset them to match the kinect position on the robot torso
+	P = Point()
+	P.x = p.z 
+	P.y = -(p.x+.042)
+	P.z = -p.y 
+	
+	x = cosy*P.x + siny*P.z
+	z = -siny*P.x + cosy*P.z
+	
+	P.x = x + dx
+	P.y = P.y + dy
+	P.z = z + dz
+	return P
+
+#--------------------------------------------------------------------------------------#
     def direction_calc(A,B):
 	X = A[0]-B[0]
 	Y = A[1]-B[1]
@@ -116,6 +148,10 @@ if __name__ == '__main__':
 			V = []
 			X_img = []
 			Y_img = []
+			X = []			#center of object in robot frame x
+			Y = []			#center of object in robot frame y
+			Z = []			#center of object in robot frame z
+			yaw = []
 			distance = []
 			direction = []
 			for i in x2:
@@ -123,12 +159,6 @@ if __name__ == '__main__':
 				b_val = int(np.mean(b[y2[i],x2[i]].tolist()))
 				g_val = int(np.mean(g[y2[i],x2[i]].tolist()))
 				r_val = int(np.mean(r[y2[i],x2[i]].tolist()))
-
-				#sh = (3*th+4*sp)*counter
-				#h[300-b_val:300, sh+(counter+1)*sp : sh+(counter+1)*sp+th,:] = [255,0,0]
-				#h[300-g_val:300, sh+(counter+2)*sp+th : sh+(counter+2)*sp+2*th,:] = [0,255,0]
-				#h[300-r_val:300, sh+(counter+3)*sp+2*th : sh+(counter+3)*sp+3*th,:] = [0,0,255]
-				#counter += 1
 
 				X2 = int(np.mean(x2[i]))
 				Y2 = int(np.mean(y2[i]))
@@ -147,19 +177,24 @@ if __name__ == '__main__':
 
 			counter = 1
 
-			for i in range(len(xyz2)-1):
-				for j in range(i+1,len(xyz2)):
+			for i in range(len(xyz2)):
+				
 
-					xi = np.mean(xyz2[i]['x'])
-					yi = np.mean(xyz2[i]['y'])
-					zi = np.mean(xyz2[i]['z'])
+				p = Point()
+				p.x = np.mean(xyz2[i]['x'])
+				p.y = np.mean(xyz2[i]['y'])
+				p.z = np.mean(xyz2[i]['z'])			
+				camera_to_torso(p)
+				X.append()
+				Y.append(np.mean(xyz2[i]['y']))
+				Z.append(np.mean(xyz2[i]['z']))
+				yaw.append(0.0) 			# to be done later
 
-					xj = np.mean(xyz2[j]['x'])
-					yj = np.mean(xyz2[j]['y'])
-					zj = np.mean(xyz2[j]['z'])
+			for i in range(len(X)-1):
+				for j in range(i+1,len(X)):
 					
-					dis = np.sqrt(  (np.abs(xi-xj))**2  +  (np.abs(yi-yj))**2  +  (np.abs(zi-zj))**2  )
-					dirr = direction_calc([xi,yi],[xj,yj])
+					dis = np.sqrt(  (np.abs(X[i]-X[j]))**2  +  (np.abs(Y[i]-Y[j]))**2  +  (np.abs(Z[i]-Z[j]))**2  )
+					dirr = direction_calc([X[i],Y[i]],[X[j],Y[j]])
 					cv2.putText(img2,"relations [%s,%s] = (d,%4.2f), (a,%4.2f)" % (i,j,dis,dirr*180/np.pi), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 					counter+=1
 					distance.append(dis)
@@ -173,9 +208,9 @@ if __name__ == '__main__':
 					cv2.putText(img2,"hyp = %s" % (hyp.obj[i]), (X2,Y2+45), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 
 				for counter in range(len(hyp.distance)):
-					cv2.putText(img2,"(d,%s), (a,%s)" % (hyp.distance[counter],hyp.direction[counter]), (380,480-20*(counter+1)), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+					cv2.putText(img2,"(d,%s), (a,%s)" % (hyp.distance[counter],hyp.direction[counter]), (350,480-20*(counter+1)), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 						
-			pub.publish(ID,distance,direction,H,S,V,X_img,Y_img)
+			pub.publish(ID,distance,direction,H,S,V,X_img,Y_img,X,Y,Z,yaw)
 
 			#print xi ,yi ,zi
 

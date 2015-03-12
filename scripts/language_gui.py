@@ -164,7 +164,7 @@ def objects(data):
 	o_color['V'] = obj_r.V
 	Learn.Test_hyp(o_color,[obj_r .distance,obj_r .direction])
 	if 'relations' in Learn.hyp:
-		pub.publish(Learn.hyp['objects_hyp'],Learn.hyp['relations_hyp']['dis'],Learn.hyp['relations_hyp']['dir'],obj_r.Ximg,obj_r.Yimg)
+		pub.publish(Learn.hyp['objects_hyp'],Learn.hyp['relations_hyp']['dis'],Learn.hyp['relations_hyp']['dir'],obj_r.Ximg,obj_r.Yimg,obj_r.X,obj_r.Y,obj_r.Z,obj_r.yaw)
 	
 	
 #-----------------------------------------------------------------------------------------------------#
