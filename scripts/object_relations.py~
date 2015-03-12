@@ -178,16 +178,14 @@ if __name__ == '__main__':
 			counter = 1
 
 			for i in range(len(xyz2)):
-				
-
 				p = Point()
 				p.x = np.mean(xyz2[i]['x'])
 				p.y = np.mean(xyz2[i]['y'])
 				p.z = np.mean(xyz2[i]['z'])			
-				camera_to_torso(p)
-				X.append()
-				Y.append(np.mean(xyz2[i]['y']))
-				Z.append(np.mean(xyz2[i]['z']))
+				K = camera_to_torso(p)
+				X.append(K.x)
+				Y.append(K.y)
+				Z.append(K.z)
 				yaw.append(0.0) 			# to be done later
 
 			for i in range(len(X)-1):

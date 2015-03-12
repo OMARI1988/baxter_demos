@@ -177,9 +177,8 @@ if __name__ == '__main__':
 
 			counter = 1
 
+			print xyz2
 			for i in range(len(xyz2)):
-				
-
 				p = Point()
 				p.x = np.mean(xyz2[i]['x'])
 				p.y = np.mean(xyz2[i]['y'])

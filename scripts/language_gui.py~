@@ -20,6 +20,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from sensor_msgs.msg import Image
 import cv_bridge
 
+from baxter_demos.msg import obj_hypotheses
+
 #-----------------------------------------------------------------------------------------------------#
 global obj_r,Learn
 obj_r = []
@@ -164,7 +166,7 @@ def objects(data):
 	o_color['V'] = obj_r.V
 	Learn.Test_hyp(o_color,[obj_r .distance,obj_r .direction])
 	if 'relations' in Learn.hyp:
-		pub.publish(Learn.hyp['objects_hyp'],Learn.hyp['relations_hyp']['dis'],Learn.hyp['relations_hyp']['dir'],obj_r.Ximg,obj_r.Yimg)
+		pub.publish(Learn.hyp['objects_hyp'],Learn.hyp['relations_hyp']['dis'],Learn.hyp['relations_hyp']['dir'],obj_r.Ximg,obj_r.Yimg,obj_r.X,obj_r.Y,obj_r.Z,obj_r.yaw)
 	
 	
 #-----------------------------------------------------------------------------------------------------#
@@ -182,6 +184,8 @@ class simpleapp_tk(Tkinter.Tk):
     def initialize(self):
         self.grid()
 
+	self.pub2 = rospy.Publisher('obj_manipulation', obj_hypotheses, queue_size=1)
+	self.pub3 = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         self.entryVariable = Tkinter.StringVar()
         self.entry = Tkinter.Entry(self,textvariable=self.entryVariable,width=130)
         self.entry.grid(column=0,row=0,sticky='EW')
@@ -199,6 +203,9 @@ class simpleapp_tk(Tkinter.Tk):
 
         button4 = Tkinter.Button(self,text=u"Load",command=self.Load)
         button4.grid(column=4,row=0)
+
+        button4 = Tkinter.Button(self,text=u"Pick",command=self.Pick)
+        button4.grid(column=5,row=0)
 
         self.labelVariable = Tkinter.StringVar()
         label = Tkinter.Label(self,textvariable=self.labelVariable,
@@ -253,6 +260,10 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
 
+    def Pick(self):
+	sentence = self.entryVariable.get()
+        self.pub2.publish(sentence,[],[],[],[],[],[],[],[])
+
     def OnPressEnter(self,event):
         self.labelVariable.set( self.entryVariable.get()+" (Saved)" )
         self.entry.focus_set()
@@ -290,8 +301,7 @@ class simpleapp_tk(Tkinter.Tk):
 	path = dirr+img_name+'.png'
 	img = cv2.imread(path)
 	msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
-	pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
-	pub.publish(msg)
+	self.pub3.publish(msg)
 	rospy.sleep(1)
     # Sleep to allow for image to be published.
 

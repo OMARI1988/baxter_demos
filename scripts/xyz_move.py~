@@ -53,13 +53,13 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Header
 import std_srvs.srv
 from baxter_core_msgs.srv import SolvePositionIK, SolvePositionIKRequest
-
+from baxter_demos.msg import obj_hypotheses
 # load the package manifest
 
 # initialise ros node
-rospy.init_node("move_to_xyz", anonymous = True)
 
 
+#----------------------------------------------------------------------------#
 # locate class
 class manipulation():
     def __init__(self):
@@ -71,6 +71,7 @@ class manipulation():
 	self.x_offset = .03
 	self.y_offset = -.025
 	self.z_offset = .11
+        self.limb = ''
 
         self.right_limb_interface = baxter_interface.Limb(self.right)
         self.left_limb_interface = baxter_interface.Limb(self.left)
@@ -81,7 +82,9 @@ class manipulation():
 
         # Enable the actuators
         baxter_interface.RobotEnable().enable()
+	self.initial_position()
 
+    def initial_position(self):
         # set speed as a ratio of maximum speed
         self.right_limb_interface.set_joint_position_speed(self.fast)
         self.left_limb_interface.set_joint_position_speed(self.fast)
@@ -96,15 +99,13 @@ class manipulation():
         self.right_gripper.calibrate()
         self.left_gripper.calibrate()
 
-	# read the object location
-	x= [0.6733685877245448]
-	y= [0.059924626361152145]
-	z= [-0.16584928898067047]
-
-
 	# pick up an object
-	self.pick(x,y,z)
+	#self.pick(x,y,z)
 
+	# put down an object
+	#self.put(x,y,z)
+
+    #----------------------------------------------------------------------------#
     # move a limb
     def baxter_ik_move(self, limb, rpy_pose):
         quaternion_pose = conversions.list_to_pose_stamped(rpy_pose, "base")
@@ -138,8 +139,7 @@ class manipulation():
             print "requested move =", rpy_pose
             sys.exit("ERROR - baxter_ik_move - No valid joint configuration found")
 
-
-    # find all the golf balls and place them in the ball tray
+    #----------------------------------------------------------------------------#
     def pick(self,x,y,z):
 
 	if y>0:
@@ -175,13 +175,85 @@ class manipulation():
 
         # speed up again
         self.limb_interface.set_joint_position_speed(self.fast)
+	if self.limb == 'left':
+        	self.baxter_ik_move(self.limb, (0.3, 0.50, 0.2, math.pi, 0.0, 0.0))
+	if self.limb == 'right':
+        	self.baxter_ik_move(self.limb, (0.3, -0.50, 0.2, math.pi, 0.0, 0.0))
 
 
-def main():
-    # get setup parameters
-    locator = manipulation()
+    #----------------------------------------------------------------------------#
+    def put(self,x,y,z):
 
+	if self.limb != '':	#pick should happen first
+
+		x = x + self.x_offset
+		y = y + self.y_offset
+		z = z + self.z_offset
+
+		# move above object
+		self.baxter_ik_move(self.limb, (x, y, 0.2, math.pi, 0.0, 0.0))
+
+		# slow down to reduce scattering of neighbouring
+		self.limb_interface.set_joint_position_speed(self.slow)
+
+		# pick up the object
+		self.baxter_ik_move(self.limb, (x, y, z, math.pi, 0.0, 0.0))
+
+		# close the gripper
+        	self.gripper.open()
+		time.sleep(1)
+
+		# left the object
+		self.baxter_ik_move(self.limb, (x, y, 0.2, math.pi, 0.0, 0.0))
+
+		# speed up again
+		self.limb_interface.set_joint_position_speed(self.fast)
+		if self.limb == 'left':
+			self.baxter_ik_move(self.limb, (0.3, 0.50, 0.2, math.pi, 0.0, 0.0))
+		if self.limb == 'right':
+			self.baxter_ik_move(self.limb, (0.3, -0.50, 0.2, math.pi, 0.0, 0.0))
+
+
+#----------------------------------------------------------------------------#
+class main():
+    def __init__(self):
+	rospy.init_node("manipulation", anonymous = True)
+        rospy.Subscriber('/obj_hypotheses', obj_hypotheses, self.hypotheses)
+        rospy.Subscriber('/obj_manipulation', obj_hypotheses, self.manipulation_callback)
+        rospy.Subscriber('/obj_manipulation_voice', obj_hypotheses, self.manipulation_voice_callback)
+        self.manipulation = manipulation()
+
+    #----------------------------------------------------------------#
+    def hypotheses(self,data):
+	self.hyp = data
+	
+    #----------------------------------------------------------------#
+    def manipulation_callback(self,data):
+	self.hyp2 = self.hyp
+	print data
+	if data.obj[0] in self.hyp2.obj:
+		ind = self.hyp2.obj.index(data.obj[0])
+		x = self.hyp2.X[ind]
+		y = self.hyp2.Y[ind]
+		z =  self.hyp2.Z[ind]
+		self.manipulation.pick(x,y,z)
+		self.manipulation.put(x,y,z)
+
+    #----------------------------------------------------------------#
+    def manipulation_voice_callback(self,data):
+	self.hyp2 = self.hyp
+	for i in data.obj:
+	    print i
+	    if i in self.hyp2.obj:
+		print '- ',i,' in hypotheses'
+		ind = self.hyp2.obj.index(i)
+		x = self.hyp2.X[ind]
+		y = self.hyp2.Y[ind]
+		z =  self.hyp2.Z[ind]
+		self.manipulation.pick(x,y,z)
+		self.manipulation.put(x,y,z)
 
 if __name__ == "__main__":
     main()
+    rospy.spin()
 
