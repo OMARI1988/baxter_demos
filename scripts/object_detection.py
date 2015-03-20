@@ -18,40 +18,30 @@ from geometry_msgs.msg import Pose,Point
 import colorsys
 #from geometry_msgs.msg import Pose,Point
 
-global img,x,y,c,flag1,flag2,hyp
-hyp=[]
-img = []
-x={}
-y={}
-c={}
-xyz = {}
-idd={}
-flag1=0
-flag2=0
 
-fx = 525.0
-fy = 525.0
-cx = 319.5
-cy = 239.5
+import numpy as np
+import cv2
 
-th = 10
-sp = 5
+cap = cv2.VideoCapture('vtest.avi')
 
-rx = 0.0
-ry = 0.7854
-rz = 0.0
-cosy = np.cos(ry)
-siny = np.sin(ry)
+fgbg = cv2.BackgroundSubtractorMOG()
 
-dx = 0.22
-dy = 0.08
-dz = 0.18
+while(1):
+    ret, frame = cap.read()
+
+    fgmask = fgbg.apply(frame)
+
+    cv2.imshow('frame',fgmask)
+    k = cv2.waitKey(30) & 0xff
+    if k == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
 
 if __name__ == '__main__':
 
     br = CvBridge()	# Create a black image, a window
-
-
 
 #--------------------------------------------------------------------------------------#
     def camera_to_torso(p):
@@ -186,7 +176,7 @@ if __name__ == '__main__':
 
 			counter = 1
 
-			print xyz2
+			#print xyz2
 			for i in range(len(xyz2)):
 				p = Point()
 				p.x = np.mean(xyz2[i]['x'])

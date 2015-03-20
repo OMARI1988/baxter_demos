@@ -65,9 +65,9 @@ class manipulation():
     def __init__(self):
         self.right = "right"
         self.left = "left"
-	self.fast = .65
+	self.fast = .5
 	self.normal = .5
-	self.slow = .1
+	self.slow = .2
 	self.x_offset = .03
 	self.y_offset = -.025
 	self.z_offset = .11
@@ -84,6 +84,10 @@ class manipulation():
         baxter_interface.RobotEnable().enable()
 	self.initial_position()
 
+        # calibrate the gripper
+        self.right_gripper.calibrate()
+        self.left_gripper.calibrate()
+
     def initial_position(self):
         # set speed as a ratio of maximum speed
         self.right_limb_interface.set_joint_position_speed(self.fast)
@@ -95,9 +99,6 @@ class manipulation():
 	# move left arm away
         self.baxter_ik_move(self.left, (0.3, 0.50, 0.2, math.pi, 0.0, 0.0))
 
-        # calibrate the gripper
-        self.right_gripper.calibrate()
-        self.left_gripper.calibrate()
 
 	# pick up an object
 	#self.pick(x,y,z)

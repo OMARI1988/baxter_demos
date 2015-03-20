@@ -126,6 +126,15 @@ if __name__ == '__main__':
         img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
 	flag2=1
 
+#--------------------------------------------------------------------------------------#
+    def RH_image(imgmsg):
+        img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+    	cv2.imshow('RH_RGB',img)
+
+#--------------------------------------------------------------------------------------#
+    def LH_image(imgmsg):
+        img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+    	cv2.imshow('LH_RGB',img)
 
 #--------------------------------------------------------------------------------------#
     def talker():
@@ -177,7 +186,7 @@ if __name__ == '__main__':
 
 			counter = 1
 
-			print xyz2
+			#print xyz2
 			for i in range(len(xyz2)):
 				p = Point()
 				p.x = np.mean(xyz2[i]['x'])
@@ -251,9 +260,13 @@ if __name__ == '__main__':
     rospy.init_node('object_relations')
     rospy.loginfo('Object relations running..')
     image_topic = rospy.resolve_name("/camera/rgb/image_color") 
+    RH_image_topic = rospy.resolve_name("/cameras/right_hand_camera/image")
+    LH_image_topic = rospy.resolve_name("/cameras/left_hand_camera/image")
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters") 
 
     rospy.Subscriber(image_topic, sensor_msgs.msg.Image, detect_and_draw)
+    rospy.Subscriber(RH_image_topic, sensor_msgs.msg.Image, RH_image)
+    rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, LH_image)
     rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, objects)
 
     pub = rospy.Publisher('obj_relations', obj_relations, queue_size=1)
