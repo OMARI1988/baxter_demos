@@ -113,7 +113,7 @@
     <arg name="tf_prefix" value="$(arg tf_prefix)" />
   </include>
 
-  <arg name="config_file2" default="/opt/ros/indigo/share/object_recognition_tabletop/conf/detection.object.ros.ork"/>
+  <arg name="config_file2" default="/opt/ros/indigo/share/object_recognition_tabletop/conf/detection.table.ros.ork"/>
 
   <node pkg="object_recognition_core" ns="/object_recognition_2" name="object_recognition_core" output="screen" type="detection" args="-c $(arg config_file2)"/>
 

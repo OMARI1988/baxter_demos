@@ -117,6 +117,9 @@
 
   <node pkg="object_recognition_core" ns="/object_recognition_2" name="object_recognition_core" output="screen" type="detection" args="-c $(arg config_file2)"/>
 
+  <arg name="sleep" default="100"/>
+  <node pkg="tf" type="static_transform_publisher" name="Baxter_Xtion" args="0.22 0.08 0.18 0.0 0.7854 0.0 /torso /camera_link $(arg sleep)" />
+
 </launch>
 
 
