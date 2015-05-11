@@ -189,7 +189,7 @@ if __name__ == '__main__':
     LH_image_topic = rospy.resolve_name("/cameras/left_hand_camera/image")
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters") 
 
-    rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, detect_and_draw)
+    rospy.Subscriber(image_topic, sensor_msgs.msg.Image, detect_and_draw)
     rospy.Subscriber(depth_topic, sensor_msgs.msg.Image, detect_and_draw_depth)
     #rospy.Subscriber(RH_image_topic, sensor_msgs.msg.Image, RH_image)
     #rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, LH_image)

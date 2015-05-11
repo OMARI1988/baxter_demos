@@ -133,6 +133,7 @@ if __name__ == '__main__':
 	global x,y
 
         img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+	img = img[:,:,0:3]
 	fgmask = fgbg.apply(img)
 
 	cv2.imshow('rgb',img)
