@@ -16,13 +16,20 @@ class object_detection():
         self.BS1 = cv2.BackgroundSubtractorMOG()    #background subtraction for xtion RGB
         
         xtion_rgb_topic = rospy.resolve_name("/camera/rgb/image_color") 
-        rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self.xtion_rgb)
+        rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self._xtion_rgb)
         
         
-    def xtion_rgb(self,imgmsg):
+    def _xtion_rgb(self,imgmsg):
         self.xtion_img = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
-        fgmask = self.BS1.apply(self.xtion_img)
+        self.xtion_mask = self._subtract(self.xtion_img.copy(), self.BS1)
+        self.xtion_result = self._plot_results(self.xtion_img.copy(), self.xtion_mask)
         
+        cv2.imshow('xtion rgb',self.xtion_img)
+        cv2.imshow('xtion rgb masked',self.xtion_result)
+        k = cv2.waitKey(1) & 0xff
+        
+    def _subtract(self, img, BS):
+        fgmask = BS.apply(img)
         contour,hier = cv2.findContours(fgmask,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
         for cnt in contour:
             cv2.drawContours(fgmask,[cnt],0,255,-1)
@@ -32,22 +39,20 @@ class object_detection():
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30))
         fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
         fgmask = cv2.bitwise_not(fgmask)
-        cv2.imshow('mask',fgmask)
+        return fgmask
         
+    def _plot_results(self, img, fgmask):
         contour,hier = cv2.findContours(fgmask,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
         for count,cnt in enumerate(contour):
             area = cv2.contourArea(cnt)
             x,y,w,h = cv2.boundingRect(cnt)
-            cv2.rectangle(self.xtion_img, (x,y), (x+w,y+h), (255*np.random.rand(3)).astype(int), 2)
-            #roi=self.xtion_img[y:y+h,x:x+w]
+            cv2.rectangle(img, (x,y), (x+w,y+h), (255*np.random.rand(3)).astype(int), 2)
+            #roi=img[y:y+h,x:x+w]
             #cv2.imshow(str(count),roi)
+        return img
             
-        print '----------'
 
-        cv2.imshow('xtion rgb',self.xtion_img)
-        self.xtion_BS1 = cv2.bitwise_and(self.xtion_img,self.xtion_img,mask = fgmask)
-        cv2.imshow('masked',self.xtion_BS1)
-        k = cv2.waitKey(1) & 0xff
+
 
 #--------------------------------------------------------------------------------------#
 def main():
