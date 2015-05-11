@@ -133,6 +133,7 @@ if __name__ == '__main__':
 	global x,y
 
         img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+	img = img[:,:,0:3]
 	fgmask = fgbg.apply(img)
 
 	cv2.imshow('rgb',img)
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     LH_image_topic = rospy.resolve_name("/cameras/left_hand_camera/image")
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters") 
 
-    rospy.Subscriber(image_topic, sensor_msgs.msg.Image, detect_and_draw)
+    rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, detect_and_draw)
     rospy.Subscriber(depth_topic, sensor_msgs.msg.Image, detect_and_draw_depth)
     #rospy.Subscriber(RH_image_topic, sensor_msgs.msg.Image, RH_image)
     #rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, LH_image)

@@ -2,7 +2,6 @@
 # -*- coding: iso-8859-1 -*-
 
 import roslib
-#roslib.load_manifest ("gaussian_markers")
 import rospy
 import PyKDL
 from visualization_msgs.msg import Marker, MarkerArray
@@ -85,20 +84,14 @@ rospy.init_node ('markersample', anonymous = True)
 points_pub = rospy.Publisher ("visualization_markers", visualization_msgs.msg.Marker,queue_size=1000)
 gauss_pub = rospy.Publisher ("gaussian", visualization_msgs.msg.Marker,queue_size=1000)
 
-hyp = read_file('16_colors')
-for i in hyp['hyp']:
-    for j in hyp['hyp'][i]:
-		1
-
-word = 'red'
+hyp = read_file('16_colors')		# read a pickle file
+	
+word = 'is'				# test for this word
 
 while not rospy.is_shutdown ():
-    syntetic_samples = None
+
+    # build the data vector
     X = []
-
-
-
-
     x_val = hyp['hyp'][word]['hist_HSV_x']
     y_val = hyp['hyp'][word]['hist_HSV_y']
     z_val = hyp['hyp'][word]['hist_HSV_z']
@@ -108,8 +101,7 @@ while not rospy.is_shutdown ():
 	else:
 		X = np.vstack([X,[x/10.0,y/10.0,z/10.0]])
 
-
-
+    # plot all data on rviz
     counter = 0
     for j, (x, y, z) in enumerate(zip(X[:,0], X[:,1], X[:,2])):
 		#print j
@@ -138,13 +130,15 @@ while not rospy.is_shutdown ():
 		counter+=1
 		rospy.sleep (.002)
 
-    N = 10												# maximum number of clusters
 
+    N = 5			# maximum number of clusters
     Y_all = []
     k_all = []
     clusters = []
     max_score_n = 0
-    for cluster in range(3,N+1):
+
+    
+    for cluster in range(1,N+1):
 	    print 'number of clusters : ',cluster
 	    clf = mixture.GMM(n_components=cluster, covariance_type='full')
 	    clf.fit(X)

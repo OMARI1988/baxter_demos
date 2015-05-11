@@ -8,10 +8,6 @@ rosrun baxter_demos object_relations.py
 
 rosrun baxter_demos language_gui.py
 
-# load rgb or data2
-
-rosrun baxter_tools tuck_arms.py -u
-
 rosrun baxter_demos xyz_move.py
 
 roslaunch ros_mary_tts ros_mary.launch
