@@ -70,7 +70,7 @@ class object_detection():
         else:
             self.xtion_mask_rgb = self._subtract(self.xtion_img_rgb.copy(), self.BS1)
             self.xtion_result_rgb = self._plot_results(self.xtion_img_rgb.copy(), self.xtion_mask_rgb)
-            cv2.imshow('xtion rgb masked',self.xtion_result_rgb)    
+            cv2.imshow('xtion rgb masked',self.xtion_mask_rgb)    
             #res = cv2.bitwise_and(self.xtion_img_rgb,self.xtion_img_rgb,mask = self.d_mask)
             #cv2.imshow('xtion rgb mask',res)    
         cv2.imshow('xtion rgb',self.xtion_img_rgb)
@@ -106,8 +106,8 @@ class object_detection():
             self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
             self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
         
-            cv2.imshow('xtion d',self.xtion_img_d_rgb)
-            cv2.imshow('xtion d masked',self.xtion_result_d)
+            #cv2.imshow('xtion d',self.xtion_img_d_rgb)
+            #cv2.imshow('xtion d masked',self.xtion_result_d)
             k = cv2.waitKey(1) & 0xff
         
     def _subtract(self, img, BS):

@@ -45,10 +45,12 @@ class scene_segment():
 class object_detection():
     def __init__(self):
 
-        self.main_counter = 100
+        self.depth_filter = 1000                    # filter anything more than this in mm
+        self.rgb_counter = 50                     # don't accept images untill this frame for RGB
+        self.d_counter = 25                     # don't accept images untill this frame for depth
         self.cv_bridge = CvBridge()	                # initilize opencv
         self.BS1 = cv2.BackgroundSubtractorMOG()    #background subtraction for xtion RGB
-        self.BS2 = cv2.BackgroundSubtractorMOG()    #background subtraction for xtion depth
+        self.BS2 = cv2.BackgroundSubtractorMOG(history=10, nmixtures=10, backgroundRatio=.01, noiseSigma=.1)    #background subtraction for xtion depth
         self.d_mask = []
 
         xtion_rgb_topic = rospy.resolve_name("/camera/rgb/image_color") 
@@ -63,8 +65,8 @@ class object_detection():
         self.xtion_img_rgb = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
         if self.d_mask != []:    self.xtion_img_rgb = cv2.bitwise_and(self.xtion_img_rgb,self.xtion_img_rgb,mask = self.d_mask)
         #self.seg_results = self.segment.segment_image(self.xtion_img_rgb)
-        if self.main_counter>0: 
-            self.main_counter -= 1
+        if self.rgb_counter>0: 
+            self.rgb_counter -= 1
         else:
             self.xtion_mask_rgb = self._subtract(self.xtion_img_rgb.copy(), self.BS1)
             self.xtion_result_rgb = self._plot_results(self.xtion_img_rgb.copy(), self.xtion_mask_rgb)
@@ -78,31 +80,35 @@ class object_detection():
         
     def _xtion_depth(self,imgmsg):
         self.xtion_img_d = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
-        self.xtion_img_d.setflags(write=True)
-        a1 = self.xtion_img_d>1000
-        #a2 = self.xtion_img_d<1000
-        self.xtion_img_d[a1] = 0
-        fgmask = cv2.convertScaleAbs(self.xtion_img_d)
-        self.xtion_img_d_rgb = cv2.cvtColor(fgmask,cv2.COLOR_GRAY2BGR)
-        """
-        contour,hier = cv2.findContours(fgmask,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
-        for cnt in contour:
-            cv2.drawContours(fgmask,[cnt],0,255,-1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(10,10))
-        fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
-        fgmask = cv2.bitwise_not(fgmask)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30))
-        fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
-        self.d_mask = cv2.bitwise_not(fgmask)
-        """
+        self.xtion_img_d.setflags(write=True)                   # allow to change the values
+        a1 = self.xtion_img_d>self.depth_filter                 # apply the depth filter1
+        self.xtion_img_d[a1] = 0                                # apply the depth filter2
+        self.xtion_img_d = (self.xtion_img_d.astype(float)/self.depth_filter*255).astype(int)
+        fgmask = cv2.convertScaleAbs(self.xtion_img_d)          # cv2 stuff
+        self.xtion_img_d_rgb = cv2.cvtColor(fgmask,cv2.COLOR_GRAY2BGR)  # cv2 stuff
         
-        #self.seg_results = self.segment.segment_image(self.xtion_img_d_rgb)
-        self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
-        self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
+        if self.d_counter>0: 
+            self.d_counter -= 1
+        else:
+            
+            contour,hier = cv2.findContours(fgmask,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+            for cnt in contour:
+                cv2.drawContours(fgmask,[cnt],0,255,-1)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(10,10))
+            fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
+            fgmask = cv2.bitwise_not(fgmask)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30))
+            fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
+            self.d_mask = cv2.bitwise_not(fgmask)
+            
+            
+            #self.seg_results = self.segment.segment_image(self.xtion_img_d_rgb)
+            self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
+            self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
         
-        cv2.imshow('xtion d',self.xtion_img_d_rgb)
-        cv2.imshow('xtion d masked',self.xtion_result_d)
-        k = cv2.waitKey(1) & 0xff
+            cv2.imshow('xtion d',self.xtion_img_d_rgb)
+            cv2.imshow('xtion d masked',self.xtion_result_d)
+            k = cv2.waitKey(1) & 0xff
         
     def _subtract(self, img, BS):
         fgmask = BS.apply(img)
