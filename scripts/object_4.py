@@ -45,6 +45,7 @@ class scene_segment():
 class object_detection():
     def __init__(self):
 
+        self.enlarge = 1.5
         self.depth_filter = 1000                    # filter anything more than this in mm
         self.rgb_counter = 50                     # don't accept images untill this frame for RGB
         self.d_counter = 25                     # don't accept images untill this frame for depth
@@ -63,14 +64,16 @@ class object_detection():
         
     def _xtion_rgb(self,imgmsg):
         self.xtion_img_rgb = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+        self.xtion_img_rgb_original = self.xtion_img_rgb.copy()
         if self.d_mask != []:    self.xtion_img_rgb = cv2.bitwise_and(self.xtion_img_rgb,self.xtion_img_rgb,mask = self.d_mask)
         #self.seg_results = self.segment.segment_image(self.xtion_img_rgb)
         if self.rgb_counter>0: 
             self.rgb_counter -= 1
         else:
             self.xtion_mask_rgb = self._subtract(self.xtion_img_rgb.copy(), self.BS1)
-            self.xtion_result_rgb = self._plot_results(self.xtion_img_rgb.copy(), self.xtion_mask_rgb)
-            cv2.imshow('xtion rgb masked',self.xtion_mask_rgb)    
+            self.xtion_result_rgb = self._plot_results(self.xtion_img_rgb_original, self.xtion_mask_rgb)
+            #self.xtion_mask_rgb[self.xtion_mask_rgb>0] = 255
+            cv2.imshow('xtion rgb masked',self.xtion_result_rgb)    
             #res = cv2.bitwise_and(self.xtion_img_rgb,self.xtion_img_rgb,mask = self.d_mask)
             #cv2.imshow('xtion rgb mask',res)    
         cv2.imshow('xtion rgb',self.xtion_img_rgb)
@@ -103,12 +106,12 @@ class object_detection():
             
             
             #self.seg_results = self.segment.segment_image(self.xtion_img_d_rgb)
-            self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
-            self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
+            #self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
+            #self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
         
             #cv2.imshow('xtion d',self.xtion_img_d_rgb)
             #cv2.imshow('xtion d masked',self.xtion_result_d)
-            k = cv2.waitKey(1) & 0xff
+            #k = cv2.waitKey(1) & 0xff
         
     def _subtract(self, img, BS):
         fgmask = BS.apply(img)
@@ -121,8 +124,6 @@ class object_detection():
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(30,30))
         fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
         fgmask = cv2.bitwise_not(fgmask)
-        #kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
-        #fgmask = cv2.morphologyEx(fgmask,cv2.MORPH_OPEN,kernel)
         return fgmask
         
     def _plot_results(self, img, fgmask):
@@ -130,7 +131,13 @@ class object_detection():
         for count,cnt in enumerate(contour):
             area = cv2.contourArea(cnt)
             x,y,w,h = cv2.boundingRect(cnt)
-            cv2.rectangle(img, (x,y), (x+w,y+h), (255*np.random.rand(3)).astype(int), 2)
+            cx = x+w/2
+            cy = y+h/2
+            cw = int(w/2*self.enlarge)
+            ch = int(h/2*self.enlarge)
+            cv2.rectangle(img, (cx-cw,cy-ch), (cx+cw,cy+ch), (255*np.random.rand(3)).astype(int), 2)
+            cv2.line(img,(cx-10,cy), (cx+10,cy), (255*np.random.rand(3)).astype(int), 2)
+            cv2.line(img,(cx,cy-10), (cx,cy+10), (255*np.random.rand(3)).astype(int), 2)
             #roi=img[y:y+h,x:x+w]
             #cv2.imshow(str(count),roi)
         return img

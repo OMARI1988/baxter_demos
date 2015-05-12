@@ -55,13 +55,19 @@ class object_detection():
         self.d_mask = []
 
         xtion_rgb_topic = rospy.resolve_name("/camera/rgb/image_color") 
-        rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self._xtion_rgb)
+        #rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self._xtion_rgb)
         
         xtion_depth_topic = rospy.resolve_name("/camera/depth_registered/hw_registered/image_rect_raw") 
-        rospy.Subscriber(xtion_depth_topic, sensor_msgs.msg.Image, self._xtion_depth)
+        #rospy.Subscriber(xtion_depth_topic, sensor_msgs.msg.Image, self._xtion_depth)
         
-        self.segment = scene_segment()
+        pc_topic = rospy.resolve_name("") 
+        rospy.Subscriber(pc_topic, sensor_msgs.msg.PointCloud2, self._pc)
+
+        #self.segment = scene_segment()
         
+    def _pc(self,imgmsg):
+        print imgmsg
+
     def _xtion_rgb(self,imgmsg):
         self.xtion_img_rgb = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
         self.xtion_img_rgb_original = self.xtion_img_rgb.copy()
@@ -106,12 +112,12 @@ class object_detection():
             
             
             #self.seg_results = self.segment.segment_image(self.xtion_img_d_rgb)
-            #self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
-            #self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
+            self.xtion_mask_d = self._subtract(self.xtion_img_d_rgb.copy(), self.BS2)
+            self.xtion_result_d = self._plot_results(self.xtion_img_d_rgb.copy(), self.xtion_mask_d)
         
-            #cv2.imshow('xtion d',self.xtion_img_d_rgb)
-            #cv2.imshow('xtion d masked',self.xtion_result_d)
-            #k = cv2.waitKey(1) & 0xff
+            cv2.imshow('xtion d',self.xtion_img_d_rgb)
+            cv2.imshow('xtion d masked',self.xtion_result_d)
+            k = cv2.waitKey(1) & 0xff
         
     def _subtract(self, img, BS):
         fgmask = BS.apply(img)
@@ -135,8 +141,8 @@ class object_detection():
             x,y,w,h = cv2.boundingRect(cnt)
             cx = x+w/2
             cy = y+h/2
-            cw = int(w/2*self.enlarge)
-            ch = int(h/2*self.enlarge)
+            cw = int(w*self.enlarge)
+            ch = int(h*self.enlarge)
             cv2.rectangle(img, (cx-cw,cy-ch), (cx+cw,cy+ch), (255*np.random.rand(3)).astype(int), 2)
             cv2.line(img,(cx-10,cy), (cx+10,cy), (255*np.random.rand(3)).astype(int), 2)
             cv2.line(img,(cx,cy-10), (cx,cy+10), (255*np.random.rand(3)).astype(int), 2)
@@ -149,10 +155,10 @@ class object_detection():
 
 #--------------------------------------------------------------------------------------#
 def main():
+    rospy.init_node('pc11')
+    rospy.loginfo('Object detection running..')
     object_detection()
     
-    rospy.init_node('object_detection')
-    rospy.loginfo('Object detection running..')
     rospy.spin()
     
 #--------------------------------------------------------------------------------------#
