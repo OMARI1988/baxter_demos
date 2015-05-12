@@ -11,6 +11,8 @@ import numpy as np
 from scipy import ndimage
 from skimage import data, io, segmentation, color
 from skimage.future import graph
+from skimage.feature import hog
+from skimage import data, color, exposure, io
 
 
 #--------------------------------------------------------------------------------------#
@@ -60,6 +62,8 @@ class object_detection():
         self.flag = 0
         self.main_counter = 0
         self.frame_counter = 0
+        self.Img = []
+        self.N = 0
 
         xtion_rgb_topic = rospy.resolve_name("/camera/rgb/image_color") 
         rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self._xtion_rgb)
@@ -122,7 +126,7 @@ class object_detection():
             y1 = min( self.y_use[key])
             y2 = max( self.y_use[key])
             cv2.rectangle(self.xtion_img_rgb, (x1,y1), (x2,y2), (255*np.random.rand(3)).astype(int), 2)
-            cv2.imshow(str(key),self.xtion_img_rgb_original[y1-5:y2+5,x1-5:x2+5])
+            #cv2.imshow(str(key),self.xtion_img_rgb_original[y1-5:y2+5,x1-5:x2+5])
             if np.mod(self.frame_counter,10)==0:
                 if self.main_counter < 10: msg = '0000'+str(self.main_counter)
                 elif self.main_counter < 100: msg = '000'+str(self.main_counter)
@@ -133,8 +137,13 @@ class object_detection():
                 yc = (y1+y2)/2
                 img = self.xtion_img_rgb_original[yc-80:yc+80,xc-80:xc+80]
                 if img.shape[0] == 160 and img.shape[1] == 160:
-                    cv2.imwrite('/home/omari/Datasets/objects/jug/jug_'+msg+'.png',img)
-                    self.main_counter += 1
+                    #cv2.imwrite('/home/omari/Datasets/objects/mug/mug_'+msg+'.png',img)
+                    Hist,Img = hog(color.rgb2gray(img), orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualise=True)
+                    if self.N == 0:     self.Img = Img
+                    else:               self.Img = (self.Img*self.N + Img)/(self.N+1)
+                    self.N += 1
+                    cv2.imshow('img',img)
+                    cv2.imshow('histogram',self.Img)
             self.frame_counter += 1
         #self.segment.segment_image(self.xtion_img_rgb[y1:y2,x1:x2],key)
 

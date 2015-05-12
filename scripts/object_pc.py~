@@ -60,6 +60,8 @@ class object_detection():
         self.flag = 0
         self.main_counter = 0
         self.frame_counter = 0
+        self.Img = []
+        self.N = 0
 
         xtion_rgb_topic = rospy.resolve_name("/camera/rgb/image_color") 
         rospy.Subscriber(xtion_rgb_topic, sensor_msgs.msg.Image, self._xtion_rgb)
@@ -131,8 +133,17 @@ class object_detection():
                 elif self.main_counter < 100000: msg = str(self.main_counter)
                 xc = (x1+x2)/2
                 yc = (y1+y2)/2
-                cv2.imwrite('/home/omari/Datasets/objects/jug/jug_'+msg+'.png',self.xtion_img_rgb_original[yc-150:yc+150,xc-150:xc+150])
-                self.main_counter += 1
+                img = self.xtion_img_rgb_original[yc-80:yc+80,xc-80:xc+80]
+                if img.shape[0] == 160 and img.shape[1] == 160:
+                    #cv2.imwrite('/home/omari/Datasets/objects/mug/mug_'+msg+'.png',img)
+                    Hist,Img = hog(img, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualise=True)
+                    if self.N == 0:     self.Img = Img
+                    else:               self.Img = (self.Img*N + Img)/(N+1)
+                    self.N += 1
+                    print self.Img
+                    cv2.imshow('histogram',self.Img)
+                    
+                    self.main_counter += 1
             self.frame_counter += 1
         #self.segment.segment_image(self.xtion_img_rgb[y1:y2,x1:x2],key)
 
