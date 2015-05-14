@@ -14,7 +14,6 @@ from std_msgs.msg import String
 
 #--------------------------------------------------------------------------------------#
 class scene_segment():
-
     def _weight_mean_color(self,graph, src, dst, n):
         diff = graph.node[dst]['mean color'] - graph.node[n]['mean color']
         diff = np.linalg.norm(diff)
@@ -45,13 +44,14 @@ class object_detection():
     
         self.test = 1
         self.Data = {}
-        self.w = 100
+        self.w = 80
         self.cv_bridge = CvBridge()	                # initilize opencv
         self.x = {}
         self.y = {}
         self.x1 = {}
         self.y1 = {}    
         self.mean1 = {}
+        self.xyz1 = {}
         self.x_use = {}
         self.y_use = {}
         self.idd = {}
@@ -80,19 +80,20 @@ class object_detection():
         x = {}
         y = {} 
         mean = {} 
+        xyz = {}
         for key in cluster.markers:
             data = len(key.points)
             x[key.id] = np.zeros(data,dtype=int)
             y[key.id] = np.zeros(data,dtype=int)
-            self.xyz[key.id] = {}
-            self.xyz[key.id]['x'] = np.zeros(data,dtype=float)
-            self.xyz[key.id]['y'] = np.zeros(data,dtype=float)
-            self.xyz[key.id]['z'] = np.zeros(data,dtype=float)
+            xyz[key.id] = {}
+            xyz[key.id]['x'] = np.zeros(data,dtype=float)
+            xyz[key.id]['y'] = np.zeros(data,dtype=float)
+            xyz[key.id]['z'] = np.zeros(data,dtype=float)
             for j in range(data):
                 k = key.points[j]
-                self.xyz[key.id]['x'][j] = k.x
-                self.xyz[key.id]['y'][j] = k.y
-                self.xyz[key.id]['z'][j] = k.z
+                xyz[key.id]['x'][j] = k.x
+                xyz[key.id]['y'][j] = k.y
+                xyz[key.id]['z'][j] = k.z
                 #xyz[i.id]
                 x[key.id][j] = int(k.x * self.fx / k.z + self.cx)
                 y[key.id][j] = int(k.y * self.fy / k.z + self.cy)
@@ -108,12 +109,13 @@ class object_detection():
                     dist = int(np.sqrt((self.mean[i][0] - mean[j][0])**2 + (self.mean[i][1] - mean[j][1])**2))
                     # do the update
                     if dist < 4:
+                        print i,j
                         matches.append(j)
                         self.x[i] = x[j]
                         self.y[i] = y[j]
                         self.mean[i] = mean[j]
-                       
-
+                        self.xyz[i] = xyz[j]
+       
             # add new objects
             if len(matches) != len(mean):
                 for j in mean:
@@ -122,8 +124,10 @@ class object_detection():
                         self.x[i] = x[j]
                         self.y[i] = y[j]
                         self.mean[i] = mean[j]
+                        self.xyz[i] = xyz[j]
                         self.idd[i] = 3
 
+        """
         # delete duplicated objects
         to_be_removed = []
         if self.x != {}:
@@ -138,12 +142,13 @@ class object_detection():
                 self.x.pop(j, None)
                 self.y.pop(j, None)
                 self.mean.pop(j, None)
-                
+        """        
         # initlize tracks
         if self.x == {}:
             self.x = x
             self.y = y
             self.mean = mean 
+            self.xyz = xyz
             for key in self.x:
                 self.idd[key] = 3
 
@@ -158,8 +163,9 @@ class object_detection():
                 self.x.pop(j, None)
                 self.y.pop(j, None)
                 self.mean.pop(j, None)
-                #self.xyz.pop(j,None)
-                
+                self.xyz.pop(j,None)
+
+        # accept the good tracks                
         keys = []
         for j in self.x.keys():
             if self.idd[j]>30:
@@ -169,10 +175,12 @@ class object_detection():
         self.x1 = {}
         self.y1 = {}
         self.mean1 = {}
+        self.xyz1 = {}
         for i in keys:
             self.x1[i] = self.x[i]
             self.y1[i] = self.y[i]
             self.mean1[i] = self.mean[i]
+            self.xyz1[i] = self.xyz[i]
 
         if self.flag != 1:
             self.flag = 1
@@ -192,8 +200,8 @@ class object_detection():
                 self.x_use = self.x1.copy()
                 self.y_use = self.y1.copy()
                 self.mean_use = self.mean1.copy()
-                self.xyz_use = self.xyz.copy()
-
+                self.xyz_use = self.xyz1.copy()
+                print self.x_use.keys()
                 # initilize the images of the histograms
                 for key in self.x_use:
                     if key not in self.histograms:
@@ -214,10 +222,15 @@ class object_detection():
                 histograms_img = np.zeros((self.w*2,self.w*2*len(self.histograms),3),dtype=np.uint8)
                 # update the histograms
                 for count,key in enumerate(self.x_use):
+                    print key
                     # correct the orientation
                     img = self._find_histograms(key)
+                    self.histograms[key]['img'] += img.copy()
+                    self.histograms[key]['counter'] += 1 
+                    img_view = np.asarray((self.histograms[key]['img']/self.histograms[key]['counter']*255)).astype(np.uint8)
+                    
                     if img.shape[0] == self.w*2 and img.shape[1] == self.w*2:
-                        histograms_img[:,self.w*2*count:self.w*2*(count+1),:] = img
+                        histograms_img[:,self.w*2*count:self.w*2*(count+1),:] = img_view
                         cv2.putText( histograms_img,str(key), (self.w*2*count+5,140), cv2.FONT_HERSHEY_SIMPLEX, 1, 255)
                     #self._store_data(img,key)
                 #self._compare_histograms()
@@ -232,8 +245,6 @@ class object_detection():
                 c1 = self.histograms[keys[i]]['img']/self.histograms[keys[i]]['counter']
                 c2 = self.histograms[keys[j]]['img']/self.histograms[keys[j]]['counter']
                 c3 = cv2.flip(c2, 1)
-                #cv2.imshow(str(counter),np.abs(c1-c3))
-                #cv2.imshow('B',np.abs(c1-c2))
                 cv2.waitKey(1)
                 A = np.sum(np.abs(c1-c3))/10000
                 B = np.sum(np.abs(c1-c2))/10000
@@ -249,20 +260,28 @@ class object_detection():
         Y = np.asarray(self.y_use[key])
         img = np.zeros(self.xtion_img_rgb.shape, dtype=np.uint8)
         img[Y,X,:] = [255,255,255]
-        #img[Y,xc-(X-xc),:] = [255,255,255]
-        img = img[yc-self.w:yc+self.w,xc-self.w:xc+self.w]
+        # resize it
+        height = np.max(Y)-np.min(Y)
+        width = np.max(X)-np.min(X)
+        window = int(np.max([width,height]))
+        # make sure its withing the image size
+        y1 = yc-window/2-5
+        y2 = yc+window/2+5
+        x1 = xc-window/2-5
+        x2 = xc+window/2+5
+        if y1<0 : y1=0
+        if y2>480: y2=480
+        if x1<0 : x1=0
+        if x2>640: x2=640
+        # crop the image to get the object
+        img = img[y1:y2,x1:x2]
         img = self._filter_image(img)
+        img = cv2.resize(img, (160, 160))
         img1 = img.astype(float)/255
-        
         # basic correct of orientation
         ang = float(xc-320)/18
         img1 = transform.rotate(img1,ang,resize=False, center=(self.w,self.w), order=1, mode='constant', cval=0, clip=True, preserve_range=False)
-        
-        self.histograms[key]['img'] += img1.copy()
-        self.histograms[key]['counter'] += 1 
-        
-        img2 = np.asarray((self.histograms[key]['img']/self.histograms[key]['counter']*255)).astype(np.uint8)
-        return img2
+        return img1
         
     def _filter_image(self,img):
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -270,8 +289,7 @@ class object_detection():
         contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(img, contours, -1, (255,255,255), 2)
         return img
-
-    ############################################ remove key and image and store data from a callback based on the sentence recieved from the msg from language gui also incremeant the scene 
+ 
     def _store_data(self,msg):
         # store scene,shape,colour,xyz
         self.Data = {}
@@ -284,7 +302,8 @@ class object_detection():
 
         print 'saving pickle file ...'
         for count,key in enumerate(self.x_use):
-            img = self._find_histograms(key)
+            img = np.asarray((self.histograms[key]['img']/self.histograms[key]['counter']*255)).astype(np.uint8)
+            #img = self._find_histograms(key)
             img_color = np.zeros((40,40,3),dtype=np.uint8)
             X = np.asarray(self.x_use[key])
             Y = np.asarray(self.y_use[key])
@@ -310,11 +329,26 @@ class object_detection():
         print 'Done saving.'
         print '--------------------------------------------'
         self.test += 1    
-    
+
+    def _correct_size(self,size_img):
+        cnt = self._find_max_contour(size_img)
+        fake_img = np.zeros((160,160,3),dtype=np.uint8)
+        cv2.drawContours(fake_img, cnt, -1, (255,255,255), -1)
+        cnt = cnt[0]
+        leftmost = tuple(cnt[cnt[:,:,0].argmin()][0])[0]
+        rightmost = tuple(cnt[cnt[:,:,0].argmax()][0])[0]
+        topmost = tuple(cnt[cnt[:,:,1].argmin()][0])[1]
+        bottommost = tuple(cnt[cnt[:,:,1].argmax()][0])[1]
+        size = fake_img[leftmost:rightmost,topmost:bottommost,:].shape
+        fake_img2 = np.zeros((size[0]+10, size[1]+10 ,3), dtype=np.uint8)
+        fake_img2[5:5+size[0],5:5+size[1],:] = fake_img[leftmost:rightmost,topmost:bottommost,:]
+        resized_image = cv2.resize(fake_img2, (160, 160)) 
+        cv2.imshow('fake',resized_image)
+        return resized_image
+
 #--------------------------------------------------------------------------------------#
 def main():
-    object_detection()
-    
+    object_detection()    
     rospy.init_node('object_detection')
     rospy.loginfo('Object detection running..')
     rospy.spin()

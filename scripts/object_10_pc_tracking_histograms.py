@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from skimage import transform
 import pickle
+from std_msgs.msg import String
 
 #--------------------------------------------------------------------------------------#
 class scene_segment():
@@ -44,7 +45,7 @@ class object_detection():
     
         self.test = 1
         self.Data = {}
-        
+        self.w = 80
         self.cv_bridge = CvBridge()	                # initilize opencv
         self.x = {}
         self.y = {}
@@ -68,6 +69,9 @@ class object_detection():
         object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters")
         rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, self._clusters)
         
+        sentence_topic = rospy.resolve_name("/sentence")
+        rospy.Subscriber(sentence_topic, String, self._store_data)
+
         self.segment = scene_segment()
         
     def _clusters(self,cluster):  
@@ -195,7 +199,7 @@ class object_detection():
                     if key not in self.histograms:
                         self.histograms[key] = {}
                         self.histograms[key]['data'] = []
-                        self.histograms[key]['img'] = np.zeros((160,160,3),dtype=float)
+                        self.histograms[key]['img'] = np.zeros((self.w*2,self.w*2,3),dtype=float)
                         self.histograms[key]['counter'] = 0
 
                 # remove deleted objects histograms
@@ -207,15 +211,15 @@ class object_detection():
                     self.histograms.pop(key, None)
 
                 #print self.histograms
-                histograms_img = np.zeros((160,160*len(self.histograms),3),dtype=np.uint8)
+                histograms_img = np.zeros((self.w*2,self.w*2*len(self.histograms),3),dtype=np.uint8)
                 # update the histograms
                 for count,key in enumerate(self.x_use):
                     # correct the orientation
                     img = self._find_histograms(key)
-                    if img.shape[0] == 160 and img.shape[1] == 160:
-                        histograms_img[:,160*count:160*(count+1),:] = img
-                        cv2.putText( histograms_img,str(key), (160*count+5,140), cv2.FONT_HERSHEY_SIMPLEX, 1, 255)
-                    self._store_data(img,key)
+                    if img.shape[0] == self.w*2 and img.shape[1] == self.w*2:
+                        histograms_img[:,self.w*2*count:self.w*2*(count+1),:] = img
+                        cv2.putText( histograms_img,str(key), (self.w*2*count+5,140), cv2.FONT_HERSHEY_SIMPLEX, 1, 255)
+                    #self._store_data(img,key)
                 #self._compare_histograms()
                 cv2.imshow('histograms',histograms_img)
             self.flag = 0
@@ -246,13 +250,13 @@ class object_detection():
         img = np.zeros(self.xtion_img_rgb.shape, dtype=np.uint8)
         img[Y,X,:] = [255,255,255]
         #img[Y,xc-(X-xc),:] = [255,255,255]
-        img = img[yc-80:yc+80,xc-80:xc+80]
+        img = img[yc-self.w:yc+self.w,xc-self.w:xc+self.w]
         img = self._filter_image(img)
         img1 = img.astype(float)/255
         
         # basic correct of orientation
         ang = float(xc-320)/18
-        img1 = transform.rotate(img1,ang,resize=False, center=(80,80), order=1, mode='constant', cval=0, clip=True, preserve_range=False)
+        img1 = transform.rotate(img1,ang,resize=False, center=(self.w,self.w), order=1, mode='constant', cval=0, clip=True, preserve_range=False)
         
         self.histograms[key]['img'] += img1.copy()
         self.histograms[key]['counter'] += 1 
@@ -268,35 +272,44 @@ class object_detection():
         return img
 
     ############################################ remove key and image and store data from a callback based on the sentence recieved from the msg from language gui also incremeant the scene 
-    def _store_data(self,img,key):
+    def _store_data(self,msg):
         # store scene,shape,colour,xyz
-        img_color = np.zeros((40,40,3),dtype=np.uint8)
-        X = np.asarray(self.x_use[key])
-        Y = np.asarray(self.y_use[key])
-        color = self.xtion_img_rgb_original[Y,X,:]
-        B = int(np.mean(color[:,0]))
-        G = int(np.mean(color[:,1]))
-        R = int(np.mean(color[:,2]))
-        img_color[:,:,:] = [B,G,R]
-        cv2.imwrite('/home/omari/Datasets/Lucas/'+str(self.test)+'_shape_'+str(key)+'.png', img)
-        cv2.imwrite('/home/omari/Datasets/Lucas/'+str(self.test)+'_color_'+str(key)+'.png', img_color)
+        self.Data = {}
+        print '--------------------------------------------'
+        print 'saving scene number ',self.test,' with the following message :'
+        self.Data['sentence'] = msg.data
+        print self.Data['sentence']
+        print 'saving scene ...'
         cv2.imwrite('/home/omari/Datasets/Lucas/'+str(self.test)+'_scene.png', self.xtion_img_rgb_original)
-        x1 = float(int(np.mean(self.xyz_use[key]['x'])*1000))/1000
-        y1 = float(int(np.mean(self.xyz_use[key]['y'])*1000))/1000
-        z1 = float(int(np.mean(self.xyz_use[key]['z'])*1000))/1000
-        #print key,x1,y1,z1
-        self.Data['scene'] = self.xtion_img_rgb_original
-        self.Data[key] = {}
-        self.Data[key]['color'] = [B,G,R]
-        self.Data[key]['shape'] = self.histograms[key]['img']/self.histograms[key]['counter']
-        self.Data[key]['x'] = x1
-        self.Data[key]['y'] = y1
-        self.Data[key]['z'] = z1
-        self.Data[key]['xyz'] = self.xyz_use[key]
+
+        print 'saving pickle file ...'
+        for count,key in enumerate(self.x_use):
+            img = self._find_histograms(key)
+            img_color = np.zeros((40,40,3),dtype=np.uint8)
+            X = np.asarray(self.x_use[key])
+            Y = np.asarray(self.y_use[key])
+            color = self.xtion_img_rgb_original[Y,X,:]
+            B = int(np.mean(color[:,0]))
+            G = int(np.mean(color[:,1]))
+            R = int(np.mean(color[:,2]))
+            img_color[:,:,:] = [B,G,R]
+            cv2.imwrite('/home/omari/Datasets/Lucas/'+str(self.test)+'_shape_'+str(key)+'.png', img)
+            cv2.imwrite('/home/omari/Datasets/Lucas/'+str(self.test)+'_color_'+str(key)+'.png', img_color)
+            x1 = float(int(np.mean(self.xyz_use[key]['x'])*1000))/1000
+            y1 = float(int(np.mean(self.xyz_use[key]['y'])*1000))/1000
+            z1 = float(int(np.mean(self.xyz_use[key]['z'])*1000))/1000
+            self.Data['scene'] = self.xtion_img_rgb_original
+            self.Data[key] = {}
+            self.Data[key]['color'] = [B,G,R]
+            self.Data[key]['shape'] = self.histograms[key]['img']/self.histograms[key]['counter']
+            self.Data[key]['x'] = x1
+            self.Data[key]['y'] = y1
+            self.Data[key]['z'] = z1
+            self.Data[key]['xyz'] = self.xyz_use[key]
         pickle.dump(self.Data, open( '/home/omari/Datasets/Lucas/'+str(self.test)+'.p', "wb" ) )
-        #print self.Data
-        #print self.xyz[key]
-    
+        print 'Done saving.'
+        print '--------------------------------------------'
+        self.test += 1    
     
 #--------------------------------------------------------------------------------------#
 def main():
