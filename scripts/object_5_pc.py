@@ -129,8 +129,8 @@ class object_detection():
                 elif self.main_counter < 1000: msg = '00'+str(self.main_counter)
                 elif self.main_counter < 10000: msg = '0'+str(self.main_counter)
                 elif self.main_counter < 100000: msg = str(self.main_counter)
-                xc = np.mean(self.x_use)/2
-                yc = (y1+y2)/2
+                xc = np.mean(self.x_use)
+                yc = np.mean(self.y_use)
                 img = self.xtion_img_rgb_original[yc-80:yc+80,xc-80:xc+80]
                 if img.shape[0] == 160 and img.shape[1] == 160:
                     cv2.imwrite('/home/omari/Datasets/objects/jug/jug_'+msg+'.png',img)
