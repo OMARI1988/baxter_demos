@@ -42,12 +42,16 @@ class scene_segment():
 class object_detection():
     def __init__(self):
     
-        self.test = 1
+        self.test = 23
         self.Data = {}
         self.w = 80
         self.cv_bridge = CvBridge()	                # initilize opencv
+        self.all_keys = [0]
+        self.accepted_keys = {}
+        self.accepted_keys_counter = 0
         self.x = {}
         self.y = {}
+        self.mean = {}
         self.x1 = {}
         self.y1 = {}    
         self.mean1 = {}
@@ -97,92 +101,82 @@ class object_detection():
                 #xyz[i.id]
                 x[key.id][j] = int(k.x * self.fx / k.z + self.cx)
                 y[key.id][j] = int(k.y * self.fy / k.z + self.cy)
-
             mean[key.id] = [int(np.mean(x[key.id])), int(np.mean(y[key.id]))]
-
-        matches = []
+            
+        matches_new = []
+        matches_old = []
         # update tracks
-        if self.x != {}:
-            # measure distance between means
-            for i in self.mean:
-                for j in mean:
-                    dist = int(np.sqrt((self.mean[i][0] - mean[j][0])**2 + (self.mean[i][1] - mean[j][1])**2))
-                    # do the update
-                    if dist < 4:
-                        matches.append(j)
-                        self.x[i] = x[j]
-                        self.y[i] = y[j]
-                        self.mean[i] = mean[j]
-                        self.xyz[i] = xyz[j]
-       
-            # add new objects
-            if len(matches) != len(mean):
-                for j in mean:
-                    if j not in matches:
-                        i = max(self.x.keys())+1
-                        self.x[i] = x[j]
-                        self.y[i] = y[j]
-                        self.mean[i] = mean[j]
-                        self.xyz[i] = xyz[j]
-                        self.idd[i] = 3
-
-        """
-        # delete duplicated objects
-        to_be_removed = []
-        if self.x != {}:
-            keys = self.mean.keys()
-            for i in range(len(keys)-1):
-                for j in range(i+1,len(keys)):
-                    if self.mean[keys[i]] == self.mean[keys[j]]:
-                        to_be_removed.append(j)
-                        
-            for j in to_be_removed:
-                self.idd.pop(j, None)
-                self.x.pop(j, None)
-                self.y.pop(j, None)
-                self.mean.pop(j, None)
-        """        
-        # initlize tracks
-        if self.x == {}:
-            self.x = x
-            self.y = y
-            self.mean = mean 
-            self.xyz = xyz
-            for key in self.x:
-                self.idd[key] = 3
-
+        # measure distance between means
+        for i in self.mean:
+            for j in mean:
+                dist = int(np.sqrt((self.mean[i][0] - mean[j][0])**2 + (self.mean[i][1] - mean[j][1])**2))
+                # do the update
+                if dist < 4:
+                    #print 'match found between existing',i,'and new',j
+                    matches_new.append(j)
+                    matches_old.append(i)
+                    self.x[i] = x[j].copy()
+                    self.y[i] = y[j].copy()
+                    self.mean[i] = mean[j]
+                    self.xyz[i] = xyz[j].copy() 
+                    
+        # add new objects
+        if len(matches_new) != len(x):
+            for j in x:
+                if j not in matches_new:
+                    #print 'new object found',j
+                    i = max(self.all_keys)+1
+                    self.all_keys.append(i)
+                    self.x[i] = x[j].copy()
+                    self.y[i] = y[j].copy()
+                    self.mean[i] = mean[j]
+                    self.xyz[i] = xyz[j].copy()
+                    self.idd[i] = 3 
+                    
         # update tracks counter
         for j in self.x.keys():
-            if j in matches:
-                self.idd[j]+=1
-            else:
-                self.idd[j]-=1
+            if j in matches_old:    self.idd[j]+=1
+            else:                   self.idd[j]-=1
+            if self.idd[j] > 50:    self.idd[j]=50
             if self.idd[j] < 0:
                 self.idd.pop(j, None)
                 self.x.pop(j, None)
                 self.y.pop(j, None)
                 self.mean.pop(j, None)
                 self.xyz.pop(j,None)
-
-        # accept the good tracks                
-        keys = []
-        for j in self.x.keys():
-            if self.idd[j]>30:
-                keys.append(j)
-            if self.idd[j]>50:
-                self.idd[j] = 50
-        self.x1 = {}
-        self.y1 = {}
-        self.mean1 = {}
-        self.xyz1 = {}
-        for i in keys:
-            self.x1[i] = self.x[i]
-            self.y1[i] = self.y[i]
-            self.mean1[i] = self.mean[i]
-            self.xyz1[i] = self.xyz[i]
-
-        if self.flag != 1:
+                
+        # accept the good tracks  
+        if self.flag != 1:              
+            keys = []
+            for j in self.x.keys():
+                if self.idd[j]>30:
+                    keys.append(j)
+            self.x1 = {}
+            self.y1 = {}
+            self.mean1 = {}
+            self.xyz1 = {}
+            for i in keys:
+                self.x1[i] = self.x[i].copy()
+                self.y1[i] = self.y[i].copy()
+                self.mean1[i] = self.mean[i]
+                self.xyz1[i] = self.xyz[i].copy()
+                """
+                if i in self.accepted_keys:
+                    print i,self.accepted_keys[i]
+                    self.x1[self.accepted_keys[i]] = self.x[i].copy()
+                    self.y1[self.accepted_keys[i]] = self.y[i].copy()
+                    self.mean1[self.accepted_keys[i]] = self.mean[i]
+                    self.xyz1[self.accepted_keys[i]] = self.xyz[i].copy()
+                else:
+                    self.accepted_keys[i] = self.accepted_keys_counter
+                    self.accepted_keys_counter+=1
+                    self.x1[self.accepted_keys[i]] = self.x[i].copy()
+                    self.y1[self.accepted_keys[i]] = self.y[i].copy()
+                    self.mean1[self.accepted_keys[i]] = self.mean[i]
+                    self.xyz1[self.accepted_keys[i]] = self.xyz[i].copy()
+                """
             self.flag = 1
+            
 
     def _xtion_rgb(self,imgmsg):
         self.xtion_img_rgb = self.cv_bridge.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough") 
@@ -200,7 +194,6 @@ class object_detection():
                 self.y_use = self.y1.copy()
                 self.mean_use = self.mean1.copy()
                 self.xyz_use = self.xyz1.copy()
-                print self.x_use.keys()
                 # initilize the images of the histograms
                 for key in self.x_use:
                     if key not in self.histograms:
@@ -208,6 +201,7 @@ class object_detection():
                         self.histograms[key]['data'] = []
                         self.histograms[key]['img'] = np.zeros((self.w*2,self.w*2,3),dtype=float)
                         self.histograms[key]['counter'] = 0
+                        
 
                 # remove deleted objects histograms
                 remove = []
@@ -217,11 +211,9 @@ class object_detection():
                 for key in remove:
                     self.histograms.pop(key, None)
 
-                #print self.histograms
                 histograms_img = np.zeros((self.w*2,self.w*2*len(self.histograms),3),dtype=np.uint8)
                 # update the histograms
                 for count,key in enumerate(self.x_use):
-                    print key
                     # correct the orientation
                     img = self._find_histograms(key)
                     self.histograms[key]['img'] += img.copy()
