@@ -12,7 +12,7 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 #import scipy.ndimage.morphology as morphology
-from baxter_demos.msg import obj_relations,obj_hypotheses
+from baxter_demos.msg import obj_relations,obj_hypotheses,action, obj_location
 import visualization_msgs.msg
 from geometry_msgs.msg import Pose,Point
 import colorsys
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	Y = A[1]-B[1]
 	C = np.arctan2(Y,X)
 	if C<0:
-		C=C+np.pi
+		C=C+2*np.pi
 	#int(C*100)/100.0
 	return C
 #--------------------------------------------------------------------------------------#
@@ -114,12 +114,63 @@ if __name__ == '__main__':
 				xyz.pop(j,None)
 		flag1=1
 
+
+#--------------------------------------------------------------------------------------#
+    def actions(data):
+	global hyp
+	#print hyp.obj
+	#print hyp.direction
+	correct_dir = []
+	correct_dis = []
+	correct_HSV = []
+	correct = []
+	#print data.obj1
+	#print data.obj2
+	
+        if data.dir[0] == '':   correct_dir = np.arange(len(hyp.X))
+        if data.dis[0] == '':   correct_dis = np.arange(len(hyp.X))
+	if len(hyp.X) == 4:
+	        counter = 0
+	        for i in range(len(hyp.X)):
+                        for j in range(len(hyp.X)):
+                                if i!=j:
+                                        if hyp.obj[i] == data.obj2[0]:
+                                                if hyp.obj[j] == data.obj1[0]:
+                                                        correct_HSV.append(j)
+                                                        #print hyp.direction[counter],data.dir[0],counter
+                                                        if hyp.direction[counter] == data.dir[0]:
+                                        	                correct_dir.append(j)
+                                                        if hyp.distance[counter] == data.dis[0]:
+                                        	                correct_dis.append(j)
+                                        counter += 1
+        #print correct_dir
+        #print correct_dis
+        for i in correct_dir:
+                if i in correct_dis and i in correct_HSV:
+                        correct.append(i)
+        if data.action[0] == 'pick' and len(correct) == 1:
+	        print data.action
+                print correct[0]
+                print hyp.X[correct[0]]
+                print hyp.Y[correct[0]]
+                print hyp.Z[correct[0]]
+                pub2.publish([hyp.X[correct[0]]],[hyp.Y[correct[0]]],[hyp.Z[correct[0]]])
+        print '-------------------------------'
+        
 #--------------------------------------------------------------------------------------#
     def hypotheses(data):
 	global hyp
 	hyp = data
-
-
+	"""
+	if len(hyp.X) == 4:
+	        counter = 0
+	        for i in range(len(hyp.X)):
+	                for j in range(len(hyp.X)):
+	                        if i != j:
+	                                print hyp.obj[i],hyp.obj[j],hyp.direction[counter]
+	                                counter += 1
+        print '-------------------------------'
+        """
 #--------------------------------------------------------------------------------------#
     def detect_and_draw(imgmsg):
 	global img,flag2
@@ -180,9 +231,9 @@ if __name__ == '__main__':
 				S.append(hsv[1])
 				V.append(hsv[2])
 
-				cv2.putText(img2,"obj.id %s" % (i), (X2,Y2), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-				cv2.putText(img2,"rgb [%s,%s,%s]" % (r_val,g_val,b_val), (X2,Y2+15), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-				cv2.putText(img2,"hsv [%s,%1.2f,%1.2f]" % (int(hsv[0]*360),hsv[1],hsv[2]), (X2,Y2+30), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+				#cv2.putText(img2,"obj.id %s" % (i), (X2,Y2), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+				#cv2.putText(img2,"rgb [%s,%s,%s]" % (r_val,g_val,b_val), (X2,Y2+15), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+				#cv2.putText(img2,"hsv [%s,%1.2f,%1.2f]" % (int(hsv[0]*360),hsv[1],hsv[2]), (X2,Y2+30), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 
 			counter = 1
 
@@ -202,11 +253,21 @@ if __name__ == '__main__':
 				for j in range(i+1,len(X)):
 					
 					dis = np.sqrt(  (np.abs(X[i]-X[j]))**2  +  (np.abs(Y[i]-Y[j]))**2  +  (np.abs(Z[i]-Z[j]))**2  )
-					dirr = direction_calc([X[i],Y[i]],[X[j],Y[j]])
+					dirr = direction_calc([Y[i],X[i]],[Y[j],X[j]])
 					cv2.putText(img2,"relations [%s,%s] = (d,%4.2f), (a,%4.2f)" % (i,j,dis,dirr*180/np.pi), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 					counter+=1
-					distance.append(dis)
-					direction.append(dirr)
+					#distance.append(dis)
+					#direction.append(dirr)
+					
+					
+			for i in range(len(X)):
+				for j in range(len(X)):
+				        if i != j :
+					        dis = np.sqrt(  (np.abs(X[i]-X[j]))**2  +  (np.abs(Y[i]-Y[j]))**2  +  (np.abs(Z[i]-Z[j]))**2  )
+					        dirr = direction_calc([Y[i],X[i]],[Y[j],X[j]])
+					        direction.append(dirr)
+					        distance.append(dis)
+				                
 
 			if hyp != []:
 			    if len(hyp.obj) == len(hyp.Ximg):
@@ -265,12 +326,14 @@ if __name__ == '__main__':
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters") 
 
     rospy.Subscriber(image_topic, sensor_msgs.msg.Image, detect_and_draw)
-    rospy.Subscriber(RH_image_topic, sensor_msgs.msg.Image, RH_image)
-    rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, LH_image)
+    #rospy.Subscriber(RH_image_topic, sensor_msgs.msg.Image, RH_image)
+    #rospy.Subscriber(LH_image_topic, sensor_msgs.msg.Image, LH_image)
     rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, objects)
 
     pub = rospy.Publisher('obj_relations', obj_relations, queue_size=1)
+    pub2 = rospy.Publisher('/obj_manipulation', obj_location, queue_size=1)
     rospy.Subscriber('/obj_hypotheses', obj_hypotheses, hypotheses)
+    rospy.Subscriber('/action', action, actions)
     talker()
 
     rospy.spin()

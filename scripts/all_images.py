@@ -65,7 +65,7 @@ def main():
     send_image('anger')
     send_image('fear')
     send_image('sleep')
-    send_image('happy')
+    send_image('university_of_leeds')
     return 0
 
 if __name__ == '__main__':

@@ -129,12 +129,20 @@ class object_detection():
                 elif self.main_counter < 1000: msg = '00'+str(self.main_counter)
                 elif self.main_counter < 10000: msg = '0'+str(self.main_counter)
                 elif self.main_counter < 100000: msg = str(self.main_counter)
+<<<<<<< HEAD:scripts/object_pc.py
+                xc = (x1+x2)/2
+                yc = (y1+y2)/2
+                print xc,yc
+                cv2.imwrite('/home/omari/Datasets/objects/coffee/coffee_'+msg+'.png',self.xtion_img_rgb_original[yc-80:yc+80,xc-80:xc+80])
+                self.main_counter += 1
+=======
                 xc = np.mean(self.x_use)
                 yc = np.mean(self.y_use)
                 img = self.xtion_img_rgb_original[yc-80:yc+80,xc-80:xc+80]
                 if img.shape[0] == 160 and img.shape[1] == 160:
                     cv2.imwrite('/home/omari/Datasets/objects/jug/jug_'+msg+'.png',img)
                     self.main_counter += 1
+>>>>>>> 1f4a58de4b1f6d6bc09cdf605fb705ede6e5c5ab:scripts/object_5_pc.py
             self.frame_counter += 1
         #self.segment.segment_image(self.xtion_img_rgb[y1:y2,x1:x2],key)
 

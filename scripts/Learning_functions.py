@@ -374,7 +374,6 @@ def Test_Relation_Hypotheses(hyp,o_qsr):
 		for i in range(len( o_qsr[1])):
 			hyp['relations']['dir'][i] = ''
 			A = np.matrix([o_qsr[1][i]*180/np.pi])
-		
 			var = 0
 			for j in hyp['valid_dir_hyp']:
 				X = hyp['hyp'][j]['dir_points_x_mean']
@@ -386,7 +385,7 @@ def Test_Relation_Hypotheses(hyp,o_qsr):
 					var = result
 				########## ASK ERIS TO GIVE CIRCULER NORM ########
 				if j=='right':
-					X = hyp['hyp'][j]['dir_points_x_mean']-360
+					X = hyp['hyp'][j]['dir_points_x_mean']+360
 					Xs= hyp['hyp'][j]['dir_points_x_std']
 					B = np.matrix([X])
 					result = norm_pdf_multivariate(A, B, np.matrix([[Xs]]))
@@ -405,6 +404,7 @@ def Test_Relation_Hypotheses(hyp,o_qsr):
 		# initilize with empty
 		for i in range(len( o_qsr[0])):
 			hyp['relations_hyp']['dis'].append('')
+		for i in range(len( o_qsr[1])):
 			hyp['relations_hyp']['dir'].append('')
 	return hyp
 

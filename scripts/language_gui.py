@@ -5,7 +5,7 @@ import rospy
 import Tkinter
 import numpy as np
 from networkx import *
-from baxter_demos.msg import obj_relations,obj_hypotheses
+from baxter_demos.msg import obj_relations,obj_hypotheses,action
 from Learning_functions import *
 from Plotting_functions import *
 import pickle
@@ -74,7 +74,7 @@ class Learning:
 	self.POINTS_HSV = data1['HSV']
 	self.POINTS_SPA = data1['SPA']
 	self.hyp = data1['hyp']
-	self.Plot()
+	#self.Plot()
 
     def save(self):
 	data1 = {}
@@ -140,7 +140,7 @@ class Learning:
 
     def Test_hyp(self,o_color,o_rel):
 	self.hyp = Test_HSV_Hypotheses(self.hyp,o_color)				# check to see if objects match any of the hypotheses
-	self.hyp = Test_Relation_Hypotheses(self.hyp,o_rel)				# check to see if objects match any of the hypotheses
+	self.hyp = Test_Relation_Hypotheses(self.hyp,o_rel)				# check to see if objects match any of the hypotheses in Learning_functions.py
 
 
 
@@ -164,9 +164,11 @@ def objects(data):
 	o_color['H'] = obj_r.H
 	o_color['S'] = obj_r.S
 	o_color['V'] = obj_r.V
+	#print obj_r .direction
 	Learn.Test_hyp(o_color,[obj_r .distance,obj_r .direction])
 	if 'relations' in Learn.hyp:
 		pub.publish(Learn.hyp['objects_hyp'],Learn.hyp['relations_hyp']['dis'],Learn.hyp['relations_hyp']['dir'],obj_r.Ximg,obj_r.Yimg,obj_r.X,obj_r.Y,obj_r.Z,obj_r.yaw)
+	#print Learn.hyp['relations_hyp']['dir']
 	
 	
 #-----------------------------------------------------------------------------------------------------#
@@ -184,13 +186,14 @@ class simpleapp_tk(Tkinter.Tk):
     def initialize(self):
         self.grid()
 
-	self.pub2 = rospy.Publisher('obj_manipulation', obj_hypotheses, queue_size=1)
+	self.pub2 = rospy.Publisher('action', action, queue_size=1)
 	self.pub3 = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         self.entryVariable = Tkinter.StringVar()
         self.entry = Tkinter.Entry(self,textvariable=self.entryVariable,width=130)
         self.entry.grid(column=0,row=0,sticky='EW')
         self.entry.bind("<Return>", self.OnPressEnter)
-        self.entryVariable.set(u"Enter sentence.")
+        # for testing purposes
+        self.entryVariable.set(u"rgb")
 
         button = Tkinter.Button(self,text=u"Add sentence",command=self.OnButtonClick)
         button.grid(column=1,row=0)
@@ -204,7 +207,7 @@ class simpleapp_tk(Tkinter.Tk):
         button4 = Tkinter.Button(self,text=u"Load",command=self.Load)
         button4.grid(column=4,row=0)
 
-        button4 = Tkinter.Button(self,text=u"Pick",command=self.Pick)
+        button4 = Tkinter.Button(self,text=u"Action",command=self.Pick)
         button4.grid(column=5,row=0)
 
         self.labelVariable = Tkinter.StringVar()
@@ -219,6 +222,7 @@ class simpleapp_tk(Tkinter.Tk):
         self.geometry(self.geometry())       
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
+        
 
     def OnButtonClick(self):
 	global obj_r
@@ -262,7 +266,36 @@ class simpleapp_tk(Tkinter.Tk):
 
     def Pick(self):
 	sentence = self.entryVariable.get()
-        self.pub2.publish([sentence],[],[],[],[],[],[],[],[])
+	words = sentence.split(' ')
+	action = ''
+	obj1 = ''
+	obj2 = ''
+	dir_rel = ''
+	dis_rel = ''
+        if 'pick' in words:     action='pick'
+        if 'put' in words:     action='put'
+        
+        look_for_relations = 0
+        for i in words:
+        
+                if look_for_relations:
+                        if i in Learn.hyp['valid_dir_hyp']:     dir_rel = i
+                        if i in Learn.hyp['valid_dis_hyp']:     dis_rel = i
+                
+                if i in Learn.hyp['valid_HSV_hyp'] and look_for_relations == 0:
+                        look_for_relations = 1
+                        obj1 = i
+                elif i in Learn.hyp['valid_HSV_hyp'] and look_for_relations == 1:
+                        look_for_relations = 0
+                        obj2 = i
+                        
+        print action,obj1,obj2,dir_rel,dis_rel
+                
+        
+	#print Learn.hyp['valid_HSV_hyp']
+	#print Learn.hyp['valid_dis_hyp']
+	#print Learn.hyp['valid_dir_hyp']
+        self.pub2.publish([action],[obj1],[obj2],[dir_rel],[dis_rel])
 
     def OnPressEnter(self,event):
         self.labelVariable.set( self.entryVariable.get()+" (Saved)" )

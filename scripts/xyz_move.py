@@ -53,7 +53,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Header
 import std_srvs.srv
 from baxter_core_msgs.srv import SolvePositionIK, SolvePositionIKRequest
-from baxter_demos.msg import obj_hypotheses
+from baxter_demos.msg import obj_hypotheses, obj_location
 # load the package manifest
 
 # initialise ros node
@@ -222,7 +222,7 @@ class main():
     def __init__(self):
 	rospy.init_node("manipulation", anonymous = True)
         rospy.Subscriber('/obj_hypotheses', obj_hypotheses, self.hypotheses)
-        rospy.Subscriber('/obj_manipulation', obj_hypotheses, self.manipulation_callback)
+        rospy.Subscriber('/obj_manipulation', obj_location, self.manipulation_callback)
         rospy.Subscriber('/obj_manipulation_voice', obj_hypotheses, self.manipulation_voice_callback)
         self.manipulation = manipulation()
 
@@ -232,13 +232,9 @@ class main():
 	
     #----------------------------------------------------------------#
     def manipulation_callback(self,data):
-	self.hyp2 = self.hyp
-	print data
-	if data.obj[0] in self.hyp2.obj:
-		ind = self.hyp2.obj.index(data.obj[0])
-		x = self.hyp2.X[ind]
-		y = self.hyp2.Y[ind]
-		z =  self.hyp2.Z[ind]
+		x = data.X[0]-.01
+		y = data.Y[0]+.02
+		z = data.Z[0]+.04
 		self.manipulation.pick(x,y,z)
 		self.manipulation.put(x,y,z)
 
