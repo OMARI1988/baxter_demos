@@ -122,7 +122,7 @@ class Learning:
 	self.hyp = Compute_HSV_hypotheses(self.hyp)		# Compute HSV hypotheses
 	self.hyp = Compute_dis_hypotheses(self.hyp)		# Compute dis hypotheses 
 	self.hyp = Compute_dir_hypotheses(self.hyp)		# Compute ang hypotheses
-	self.Plot()
+	#self.Plot()
 
     def Plot(self):
 	print(' - Plotting Hypotheses..')

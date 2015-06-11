@@ -200,7 +200,6 @@ if __name__=="__main__":
     rospy.init_node("object_markers")
     
     server = InteractiveMarkerServer("object_markers")
-    
     object_topic = rospy.resolve_name("/object_recognition_2/tabletop/clusters")
     rospy.Subscriber(object_topic, visualization_msgs.msg.MarkerArray, objects)
 

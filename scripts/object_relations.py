@@ -18,7 +18,8 @@ from geometry_msgs.msg import Pose,Point
 import colorsys
 #from geometry_msgs.msg import Pose,Point
 
-global img,x,y,c,flag1,flag2,hyp
+global img,x,y,c,flag1,flag2,hyp,frame_num,flag_hyp
+flag_hyp = 1
 hyp=[]
 img = []
 x={}
@@ -46,7 +47,7 @@ siny = np.sin(ry)
 dx = 0.22
 dy = 0.08
 dz = 0.18
-
+frame_num = 0
 if __name__ == '__main__':
 
     br = CvBridge()	# Create a black image, a window
@@ -117,7 +118,16 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def actions(data):
-	global hyp
+        perform_actions(data)
+    
+#--------------------------------------------------------------------------------------#
+    def actions_from_voice(data):
+        perform_actions(data)
+    
+#--------------------------------------------------------------------------------------#
+    def perform_actions(data):
+	global hyp,flag_hyp
+	flag_hyp = 0
 	#print hyp.obj
 	#print hyp.direction
 	correct_dir = []
@@ -129,22 +139,27 @@ if __name__ == '__main__':
 	
         if data.dir[0] == '':   correct_dir = np.arange(len(hyp.X))
         if data.dis[0] == '':   correct_dis = np.arange(len(hyp.X))
-	if len(hyp.X) == 4:
-	        counter = 0
-	        for i in range(len(hyp.X)):
-                        for j in range(len(hyp.X)):
-                                if i!=j:
-                                        if hyp.obj[i] == data.obj2[0]:
-                                                if hyp.obj[j] == data.obj1[0]:
-                                                        correct_HSV.append(j)
-                                                        #print hyp.direction[counter],data.dir[0],counter
-                                                        if hyp.direction[counter] == data.dir[0]:
-                                        	                correct_dir.append(j)
-                                                        if hyp.distance[counter] == data.dis[0]:
-                                        	                correct_dis.append(j)
-                                        counter += 1
-        #print correct_dir
-        #print correct_dis
+	#if len(hyp.X) == 4:
+        counter = 0
+        for i in range(len(hyp.X)):
+                for j in range(len(hyp.X)):
+                        if i!=j:
+                                if hyp.obj[i] == data.obj2[0]:
+                                        if hyp.obj[j] == data.obj1[0]:
+                                                correct_HSV.append(j)
+                                                #print hyp.direction[counter],data.dir[0],counter
+                                                if hyp.direction[counter] == data.dir[0]:
+                                	                correct_dir.append(j)
+                                                if hyp.distance[counter] == data.dis[0]:
+                                	                correct_dis.append(j)
+                                counter += 1
+                if data.obj2[0] == '':
+                        if hyp.obj[i] == data.obj1[0]:
+                                        correct_HSV.append(i)
+                        
+        print correct_dir
+        print correct_dis
+        print correct_HSV
         for i in correct_dir:
                 if i in correct_dis and i in correct_HSV:
                         correct.append(i)
@@ -156,11 +171,11 @@ if __name__ == '__main__':
                 print hyp.Z[correct[0]]
                 pub2.publish([hyp.X[correct[0]]],[hyp.Y[correct[0]]],[hyp.Z[correct[0]]])
         print '-------------------------------'
-        
+        flag_hyp = 1
 #--------------------------------------------------------------------------------------#
     def hypotheses(data):
-	global hyp
-	hyp = data
+	global hyp,flag_hyp
+	if flag_hyp == 1:       hyp = data
 	"""
 	if len(hyp.X) == 4:
 	        counter = 0
@@ -175,6 +190,7 @@ if __name__ == '__main__':
     def detect_and_draw(imgmsg):
 	global img,flag2
         img = br.imgmsg_to_cv2(imgmsg, desired_encoding="passthrough")
+        cv2.imshow('xtion pro live',img)
 	flag2=1
 
 #--------------------------------------------------------------------------------------#
@@ -189,7 +205,7 @@ if __name__ == '__main__':
 
 #--------------------------------------------------------------------------------------#
     def talker():
-	global img,x,y,c,flag1,flag2,xyz,hyp
+	global img,x,y,c,flag1,flag2,xyz,hyp,frame_num
 	while not rospy.is_shutdown():
 		if flag1==1 and flag2==1:
 			img2 = img.copy()
@@ -254,7 +270,7 @@ if __name__ == '__main__':
 					
 					dis = np.sqrt(  (np.abs(X[i]-X[j]))**2  +  (np.abs(Y[i]-Y[j]))**2  +  (np.abs(Z[i]-Z[j]))**2  )
 					dirr = direction_calc([Y[i],X[i]],[Y[j],X[j]])
-					cv2.putText(img2,"relations [%s,%s] = (d,%4.2f), (a,%4.2f)" % (i,j,dis,dirr*180/np.pi), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+					#cv2.putText(img2,"relations [%s,%s] = (d,%4.2f), (a,%4.2f)" % (i,j,dis,dirr*180/np.pi), (10,480-20*counter), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 					counter+=1
 					#distance.append(dis)
 					#direction.append(dirr)
@@ -274,11 +290,16 @@ if __name__ == '__main__':
 				for i in range(len(hyp.obj)):
 					X2 = hyp.Ximg[i]
 					Y2 = hyp.Yimg[i]
-					cv2.putText(img2,"hyp = %s" % (hyp.obj[i]), (X2,Y2+45), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+					cv2.putText(img2,"%s" % (hyp.obj[i]), (X2,Y2+45), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
 
-				for counter in range(len(hyp.distance)):
-					cv2.putText(img2,"(d,%s), (a,%s)" % (hyp.distance[counter],hyp.direction[counter]), (350,480-20*(counter+1)), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
-						
+				#for counter in range(len(hyp.distance)):
+					#cv2.putText(img2,"(d,%s), (a,%s)" % (hyp.distance[counter],hyp.direction[counter]), (350,480-20*(counter+1)), cv2.FONT_HERSHEY_SIMPLEX, .5, 0)
+			if frame_num<10:        f = '000'+str(frame_num)
+			if frame_num<100:        f = '00'+str(frame_num)
+			if frame_num<1000:        f = '0'+str(frame_num)
+			if frame_num<10000:        f = str(frame_num)
+			cv2.imwrite('/home/omari/Datasets/baxter_videos/test1/hyp-'+f+'.png',img)
+			frame_num += 1
 			pub.publish(ID,distance,direction,H,S,V,X_img,Y_img,X,Y,Z,yaw)
 
 			#print xi ,yi ,zi
@@ -334,6 +355,7 @@ if __name__ == '__main__':
     pub2 = rospy.Publisher('/obj_manipulation', obj_location, queue_size=1)
     rospy.Subscriber('/obj_hypotheses', obj_hypotheses, hypotheses)
     rospy.Subscriber('/action', action, actions)
+    rospy.Subscriber('/action_from_voice', action, actions_from_voice)
     talker()
 
     rospy.spin()

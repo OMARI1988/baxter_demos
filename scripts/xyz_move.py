@@ -174,14 +174,14 @@ class manipulation():
         time.sleep(1)
 
 	# left the object
-        self.baxter_ik_move(self.limb, (x, y, 0.2, math.pi, 0.0, 0.0))
+        self.baxter_ik_move(self.limb, (x, y, z, math.pi, 0.0, 0.0))
 
         # speed up again
-        self.limb_interface.set_joint_position_speed(self.fast)
-	if self.limb == 'left':
-        	self.baxter_ik_move(self.limb, (0.3, 0.50, 0.2, math.pi, 0.0, 0.0))
-	if self.limb == 'right':
-        	self.baxter_ik_move(self.limb, (0.3, -0.50, 0.2, math.pi, 0.0, 0.0))
+        #self.limb_interface.set_joint_position_speed(self.fast)
+	#if self.limb == 'left':
+        #	self.baxter_ik_move(self.limb, (0.3, 0.50, 0.2, math.pi, 0.0, 0.0))
+	#if self.limb == 'right':
+        #	self.baxter_ik_move(self.limb, (0.3, -0.50, 0.2, math.pi, 0.0, 0.0))
 
 
     #----------------------------------------------------------------------------#
@@ -194,7 +194,7 @@ class manipulation():
 		z = z + self.z_offset
 
 		# move above object
-		self.baxter_ik_move(self.limb, (x, y, 0.2, math.pi, 0.0, 0.0))
+		#self.baxter_ik_move(self.limb, (x, y, 0.2, math.pi, 0.0, 0.0))
 
 		# slow down to reduce scattering of neighbouring
 		self.limb_interface.set_joint_position_speed(self.slow)
@@ -223,7 +223,7 @@ class main():
 	rospy.init_node("manipulation", anonymous = True)
         rospy.Subscriber('/obj_hypotheses', obj_hypotheses, self.hypotheses)
         rospy.Subscriber('/obj_manipulation', obj_location, self.manipulation_callback)
-        rospy.Subscriber('/obj_manipulation_voice', obj_hypotheses, self.manipulation_voice_callback)
+        #rospy.Subscriber('/obj_manipulation_voice', obj_hypotheses, self.manipulation_voice_callback)
         self.manipulation = manipulation()
 
     #----------------------------------------------------------------#
@@ -233,8 +233,8 @@ class main():
     #----------------------------------------------------------------#
     def manipulation_callback(self,data):
 		x = data.X[0]-.01
-		y = data.Y[0]+.02
-		z = data.Z[0]+.04
+		y = data.Y[0]+.015
+		z = data.Z[0]+.08
 		self.manipulation.pick(x,y,z)
 		self.manipulation.put(x,y,z)
 

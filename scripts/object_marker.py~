@@ -135,9 +135,9 @@ def create_object_marker( name, X, Y, Z ):
         int_marker.description = 'obj'+str(name)
 	
         pose = Pose()
-        pose.position.x = X[0]
-        pose.position.y = Y[0]
-        pose.position.z = Z[0]
+        pose.position.x = .0
+        pose.position.y = .0
+        pose.position.z = .0
         int_marker.pose = pose
 
         line_marker = Marker()
@@ -147,9 +147,9 @@ def create_object_marker( name, X, Y, Z ):
         line_marker.points = []
         for i in range(len(X)):
                 p = Point()
-                p.x = X[i]-X[0]
-                p.y = Y[i]-Y[0]
-                p.z = Z[i]-Z[0]
+                p.x = X[i]
+                p.y = Y[i]
+                p.z = Z[i]
                 line_marker.points.append(p)
 
         line_marker.colors = []
