@@ -1,2 +1,3 @@
-pick up the blue object below the green object
-pick up the blue object to the right of the green object
+pick up the black object
+pick up the blue object below the black object
+pick up the blue object far from the black object
