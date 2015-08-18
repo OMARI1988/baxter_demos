@@ -55,6 +55,8 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    obj_relations.msg
    obj_hypotheses.msg
+   action.msg
+   obj_location.msg
 #   Message1.msg
 #   Message2.msg
  )

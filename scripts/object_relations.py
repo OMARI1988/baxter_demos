@@ -12,7 +12,7 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 #import scipy.ndimage.morphology as morphology
-from baxter_demos.msg import obj_relations,obj_hypotheses,action, obj_location
+from baxter_demos.msg import obj_relations,obj_hypotheses, action, obj_location
 import visualization_msgs.msg
 from geometry_msgs.msg import Pose,Point
 import colorsys

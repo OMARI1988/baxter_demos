@@ -68,9 +68,9 @@ class manipulation():
 	self.fast = .5
 	self.normal = .5
 	self.slow = .2
-	self.x_offset = .03
+	self.x_offset = .05
 	self.y_offset = -.025
-	self.z_offset = .05
+	self.z_offset = .1
         self.limb = ''
 
         self.right_limb_interface = baxter_interface.Limb(self.right)
