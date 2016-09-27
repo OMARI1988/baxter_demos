@@ -1,47 +1,45 @@
 # baxter recording dataset
-1. start kinect2
+1.start kinect2
 ```
   sudo bash
   roslaunch kinect2_bridge kinect2_bridge.launch base_name:=kinect2_1
 ```
-
-2. run kinect2 viewer
+2.run kinect2 viewer
 ```
   rosrun kinect2_viewer kinect2_viewer kinect2_1 sd cloud
 ```
-
-3. run pc filter
+3.run pc filter
 ```
   rosrun pcl_functions filter 1
 ```
-
-4. rviz
+4.rviz
 ```
   rviz
 ```
-
-5. kinect frame
+5.kinect frame
 ```
   rosrun baxter_pykdl kinect_frame.py
 ```
-
-6. joystick
+6.joystick
 ```
   rosrun joy joy_node
 ```
+7.optional
+```
+rosrun baxter_tools tuck_arms.py -u
+rosrun baxter_pykdl velocty_control_joy.py 
 
-#rosrun baxter_tools tuck_arms.py -u
-#rosrun baxter_pykdl velocty_control_joy.py 
+rosrun baxter_tools camera_control.py -o right_hand_camera -r 640x400
+rosrun baxter_tools camera_control.py -o left_hand_camera -r 640x400
+rosrun pcl_functions save_data 2
+```
 
-#rosrun baxter_tools camera_control.py -o right_hand_camera -r 640x400
-#rosrun baxter_tools camera_control.py -o left_hand_camera -r 640x400
-#rosrun pcl_functions save_data 2
-
-
-#for saving
-#./xyz_cluster 3
-#./pc_tracking 3 3 40 50 250 61
-#./cloud_viewer 3 61
+# for processing the dataset
+```
+./xyz_cluster 3
+./pc_tracking 3 3 40 50 250 61
+./cloud_viewer 3 61
+```
 
 # baxter_demos
 demos for baxer robot
