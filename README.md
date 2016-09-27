@@ -1,3 +1,32 @@
+# baxter recording dataset
+  ```
+  sudo bash
+  roslaunch kinect2_bridge kinect2_bridge.launch base_name:=kinect2_1
+  ```
+
+#rosrun kinect2_viewer kinect2_viewer kinect2_1 sd cloud
+
+#rosrun pcl_functions filter 1
+
+#rviz
+
+#rosrun baxter_pykdl kinect_frame.py
+
+#rosrun joy joy_node
+
+#rosrun baxter_tools tuck_arms.py -u
+#rosrun baxter_pykdl velocty_control_joy.py 
+
+#rosrun baxter_tools camera_control.py -o right_hand_camera -r 640x400
+#rosrun baxter_tools camera_control.py -o left_hand_camera -r 640x400
+#rosrun pcl_functions save_data 2
+
+
+#for saving
+#./xyz_cluster 3
+#./pc_tracking 3 3 40 50 250 61
+#./cloud_viewer 3 61
+
 # baxter_demos
 demos for baxer robot
 # on server
