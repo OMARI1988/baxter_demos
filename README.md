@@ -1,18 +1,34 @@
 # baxter recording dataset
-  ```
+1. start kinect2
+```
   sudo bash
   roslaunch kinect2_bridge kinect2_bridge.launch base_name:=kinect2_1
-  ```
+```
 
-#rosrun kinect2_viewer kinect2_viewer kinect2_1 sd cloud
+2. run kinect2 viewer
+```
+  rosrun kinect2_viewer kinect2_viewer kinect2_1 sd cloud
+```
 
-#rosrun pcl_functions filter 1
+3. run pc filter
+```
+  rosrun pcl_functions filter 1
+```
 
-#rviz
+4. rviz
+```
+  rviz
+```
 
-#rosrun baxter_pykdl kinect_frame.py
+5. kinect frame
+```
+  rosrun baxter_pykdl kinect_frame.py
+```
 
-#rosrun joy joy_node
+6. joystick
+```
+  rosrun joy joy_node
+```
 
 #rosrun baxter_tools tuck_arms.py -u
 #rosrun baxter_pykdl velocty_control_joy.py 
